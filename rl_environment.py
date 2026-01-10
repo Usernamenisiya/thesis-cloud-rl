@@ -41,8 +41,13 @@ class CloudMaskRefinementEnv(gym.Env):
 
     def step(self, action):
         i, j = self.current_pos
-        true_label = self.ground_truth[i + self.patch_size//2, j + self.patch_size//2]  # center pixel
-        reward = 1 if action == true_label else -1
+        # Get the entire patch ground truth
+        patch_gt = self.ground_truth[i:i+self.patch_size, j:j+self.patch_size]
+        # Reward based on patch accuracy (fraction of correct pixels)
+        patch_pred = np.full_like(patch_gt, action)  # Predict same action for entire patch
+        correct_pixels = np.sum(patch_pred == patch_gt)
+        total_pixels = patch_gt.size
+        reward = correct_pixels / total_pixels  # Reward between 0 and 1
 
         # Move to next patch (simple grid traversal)
         j += self.patch_size
@@ -54,7 +59,11 @@ class CloudMaskRefinementEnv(gym.Env):
 
         self.current_pos = (i, j)
         obs = self._get_obs() if not self.done else np.zeros(self.observation_space.shape)
-        return obs, reward, self.done, {}
+
+        # Return patch position in info for evaluation
+        info = {'patch_position': (i, j)} if not self.done else {}
+
+        return obs, reward, self.done, info
 
     def render(self):
         pass
