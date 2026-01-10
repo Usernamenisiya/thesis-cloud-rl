@@ -1,0 +1,33 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "y",
+        "x"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "y",
+            "x"
+        ],
+        "dimensions": [
+            "y",
+            "x"
+        ],
+        "dtype": "<u1",
+        "flag_masks": [
+            1,
+            2,
+            4
+        ],
+        "flag_meanings": "opaque cirrus snow_ice",
+        "long_name": "cloud classification mask provided in the final reference frame (ground geometry)",
+        "short_name": "msk_cls_b00"
+    },
+    "dtype": "<u1",
+    "flag_masks": [
+        1,
+        2,
+        4
+    ],
+    "flag_meanings": "opaque cirrus snow_ice",
+    "long_name": "cloud classification mask provided in the final reference frame (ground geometry)"
+}

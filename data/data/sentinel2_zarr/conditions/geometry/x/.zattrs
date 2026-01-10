@@ -1,0 +1,11 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "x"
+    ],
+    "dimensions": [
+        "x"
+    ],
+    "dtype": "<f4",
+    "long_name": "x coordinates of angles grid, in steps of 5km from up-left pixel",
+    "units": "m"
+}

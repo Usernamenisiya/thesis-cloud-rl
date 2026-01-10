@@ -18,8 +18,8 @@ class CloudMaskRefinementEnv(gym.Env):
         # Action space: 0 = not cloud, 1 = cloud
         self.action_space = spaces.Discrete(2)
 
-        # Observation space: patch of image + cnn_prob patch
-        obs_shape = (patch_size, patch_size, image.shape[2] + 1)  # image bands + prob
+        # Observation space: patch of image + cnn_prob patch (channels first for PyTorch)
+        obs_shape = (image.shape[2] + 1, patch_size, patch_size)  # (C, H, W)
         self.observation_space = spaces.Box(low=0, high=1, shape=obs_shape, dtype=np.float32)
 
         self.current_pos = (0, 0)
@@ -35,7 +35,8 @@ class CloudMaskRefinementEnv(gym.Env):
         patch_image = self.image[i:i+self.patch_size, j:j+self.patch_size]
         patch_prob = self.cnn_prob[i:i+self.patch_size, j:j+self.patch_size]
         patch_prob = patch_prob[..., np.newaxis]  # (patch, patch, 1)
-        obs = np.concatenate([patch_image, patch_prob], axis=-1)
+        obs = np.concatenate([patch_image, patch_prob], axis=-1)  # (H, W, C)
+        obs = np.transpose(obs, (2, 0, 1))  # Convert to (C, H, W) for PyTorch
         return obs.astype(np.float32)
 
     def step(self, action):

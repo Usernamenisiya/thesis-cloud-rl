@@ -1,0 +1,23 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "relative humidity at surface pressure",
+        "short_name": "r",
+        "units": "%"
+    },
+    "dtype": "<f4",
+    "long_name": "relative humidity at surface pressure",
+    "units": "%"
+}

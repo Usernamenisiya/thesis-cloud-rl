@@ -1,0 +1,32 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "y",
+        "x"
+    ],
+    "_eopf_attrs": {
+        "add_offset": 0,
+        "coordinates": [
+            "y",
+            "x"
+        ],
+        "dimensions": [
+            "y",
+            "x"
+        ],
+        "dtype": "<u2",
+        "eopf_is_masked": true,
+        "eopf_target_dtype": "<f8",
+        "fill_value": 0,
+        "long_name": "Water Vapour Content map at 20m",
+        "scale_factor": 0.001,
+        "short_name": "wvp_r20m",
+        "units": "cm",
+        "valid_max": 65535,
+        "valid_min": 1
+    },
+    "add_offset": 0,
+    "dtype": "<u2",
+    "long_name": "Water Vapour Content map at 20m",
+    "scale_factor": 0.001,
+    "units": "cm"
+}

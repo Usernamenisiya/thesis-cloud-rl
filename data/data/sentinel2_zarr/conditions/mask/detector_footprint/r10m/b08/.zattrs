@@ -1,0 +1,51 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "y",
+        "x"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "y",
+            "x"
+        ],
+        "dimensions": [
+            "y",
+            "x"
+        ],
+        "dtype": "<u1",
+        "flag_meanings": "D01 D02 D03 D04 D05 D06 D07 D08 D09 D10 D11 D12",
+        "flag_values": [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12
+        ],
+        "long_name": "detector footprint mask provided in the final reference frame (ground geometry)",
+        "short_name": "msk_detfoo_b08"
+    },
+    "dtype": "<u1",
+    "flag_meanings": "D01 D02 D03 D04 D05 D06 D07 D08 D09 D10 D11 D12",
+    "flag_values": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+    ],
+    "long_name": "detector footprint mask provided in the final reference frame (ground geometry)"
+}

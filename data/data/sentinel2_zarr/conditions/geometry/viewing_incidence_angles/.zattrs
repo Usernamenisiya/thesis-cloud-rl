@@ -1,0 +1,32 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "band",
+        "detector",
+        "angle",
+        "y",
+        "x"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "angle",
+            "y",
+            "x",
+            "band",
+            "detector"
+        ],
+        "dimensions": [
+            "band",
+            "detector",
+            "angle",
+            "y",
+            "x"
+        ],
+        "dtype": "<f8",
+        "long_name": "viewing incidence angles",
+        "short_name": "viewing_incidence_angles",
+        "units": "degrees"
+    },
+    "dtype": "<f8",
+    "long_name": "viewing incidence angles",
+    "units": "degrees"
+}

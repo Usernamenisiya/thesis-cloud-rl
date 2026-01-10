@@ -1,0 +1,23 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "band",
+        "angle"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "angle",
+            "band"
+        ],
+        "dimensions": [
+            "band",
+            "angle"
+        ],
+        "dtype": "<f8",
+        "long_name": "mean viewing incidence angles",
+        "short_name": "mean_viewing_incidence_angles",
+        "units": "degrees"
+    },
+    "dtype": "<f8",
+    "long_name": "mean viewing incidence angles",
+    "units": "degrees"
+}

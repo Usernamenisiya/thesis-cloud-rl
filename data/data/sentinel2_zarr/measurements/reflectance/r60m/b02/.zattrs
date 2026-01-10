@@ -1,0 +1,32 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "y",
+        "x"
+    ],
+    "_eopf_attrs": {
+        "add_offset": -0.1,
+        "coordinates": [
+            "y",
+            "x"
+        ],
+        "dimensions": [
+            "y",
+            "x"
+        ],
+        "dtype": "<u2",
+        "eopf_is_masked": true,
+        "eopf_target_dtype": "<f8",
+        "fill_value": 0,
+        "long_name": "BOA reflectance from MSI acquisition at spectral band 02 490 nm",
+        "scale_factor": 0.0001,
+        "short_name": "b02_60m",
+        "units": "digital_counts",
+        "valid_max": 65535,
+        "valid_min": 1
+    },
+    "add_offset": -0.1,
+    "dtype": "<u2",
+    "long_name": "BOA reflectance from MSI acquisition at spectral band 02 490 nm",
+    "scale_factor": 0.0001,
+    "units": "digital_counts"
+}

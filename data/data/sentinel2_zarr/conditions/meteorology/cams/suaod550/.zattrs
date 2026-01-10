@@ -1,0 +1,21 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "sulphate aerosol optical thickness at 550nm",
+        "short_name": "suaod550"
+    },
+    "dtype": "<f4",
+    "long_name": "sulphate aerosol optical thickness at 550nm"
+}

@@ -1,0 +1,21 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "total aerosol optical thickness at 670nm",
+        "short_name": "aod670"
+    },
+    "dtype": "<f4",
+    "long_name": "total aerosol optical thickness at 670nm"
+}

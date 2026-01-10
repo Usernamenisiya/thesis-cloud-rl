@@ -1,0 +1,23 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "mean sea level pressure",
+        "short_name": "msl",
+        "units": "hPa"
+    },
+    "dtype": "<f4",
+    "long_name": "mean sea level pressure",
+    "units": "hPa"
+}

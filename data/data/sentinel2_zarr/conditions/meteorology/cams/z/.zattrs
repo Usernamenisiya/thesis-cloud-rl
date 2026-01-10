@@ -1,0 +1,23 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "geopotential surface z",
+        "short_name": "z",
+        "units": "m2/s2"
+    },
+    "dtype": "<f4",
+    "long_name": "geopotential surface z",
+    "units": "m2/s2"
+}

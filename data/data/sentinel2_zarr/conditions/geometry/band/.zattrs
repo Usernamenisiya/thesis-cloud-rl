@@ -1,0 +1,26 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "band"
+    ],
+    "dimensions": [
+        "band"
+    ],
+    "dtype": "<U3",
+    "flag_meanings": "B01 B02 B03 B04 B05 B06 B07 B08 B8A B09 B10 B11 B12",
+    "flag_values": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+    ],
+    "long_name": "spectral band number"
+}

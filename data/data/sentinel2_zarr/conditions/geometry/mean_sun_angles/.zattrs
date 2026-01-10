@@ -1,0 +1,20 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "angle"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "angle"
+        ],
+        "dimensions": [
+            "angle"
+        ],
+        "dtype": "<f8",
+        "long_name": "mean solar angles (all detectors, all bands)",
+        "short_name": "mean_sun_angles",
+        "units": "degrees"
+    },
+    "dtype": "<f8",
+    "long_name": "mean solar angles (all detectors, all bands)",
+    "units": "degrees"
+}

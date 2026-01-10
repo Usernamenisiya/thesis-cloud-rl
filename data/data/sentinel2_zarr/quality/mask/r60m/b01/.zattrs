@@ -1,0 +1,47 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "y",
+        "x"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "y",
+            "x"
+        ],
+        "dimensions": [
+            "y",
+            "x"
+        ],
+        "dtype": "<u1",
+        "flag_masks": [
+            1,
+            2,
+            4,
+            8,
+            16,
+            32,
+            64,
+            128,
+            256,
+            512
+        ],
+        "flag_meanings": "ANC_LOST ANC_DEG MSI_LOST MSI_DEG DEFECTIVE_PIXEL NODATA_PIXEL PARTIALLY_CORRECTED_PIXEL SATURATED_PIXEL_L1A SATURATED_PIXEL_L1B CLOUD",
+        "long_name": "quality mask provided in the final reference frame (ground geometry)",
+        "short_name": "msk_quality_b01"
+    },
+    "dtype": "<u1",
+    "flag_masks": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        32,
+        64,
+        128,
+        256,
+        512
+    ],
+    "flag_meanings": "ANC_LOST ANC_DEG MSI_LOST MSI_DEG DEFECTIVE_PIXEL NODATA_PIXEL PARTIALLY_CORRECTED_PIXEL SATURATED_PIXEL_L1A SATURATED_PIXEL_L1B CLOUD",
+    "long_name": "quality mask provided in the final reference frame (ground geometry)"
+}

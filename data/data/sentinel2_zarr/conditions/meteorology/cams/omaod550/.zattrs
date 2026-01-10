@@ -1,0 +1,21 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "organic matter aerosol optical thickness at 550nm",
+        "short_name": "omaod550"
+    },
+    "dtype": "<f4",
+    "long_name": "organic matter aerosol optical thickness at 550nm"
+}

@@ -1,0 +1,23 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "10m eastward wind component",
+        "short_name": "u10",
+        "units": "m/s"
+    },
+    "dtype": "<f4",
+    "long_name": "10m eastward wind component",
+    "units": "m/s"
+}

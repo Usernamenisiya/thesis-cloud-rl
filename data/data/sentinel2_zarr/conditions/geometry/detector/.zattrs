@@ -1,0 +1,13 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "detector"
+    ],
+    "dimensions": [
+        "detector"
+    ],
+    "dtype": "<U3",
+    "fill_value": 0,
+    "long_name": "detector module number",
+    "valid_max": 12,
+    "valid_min": 1
+}

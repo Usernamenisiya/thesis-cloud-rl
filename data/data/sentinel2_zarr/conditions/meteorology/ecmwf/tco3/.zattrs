@@ -1,0 +1,23 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "total column ozone",
+        "short_name": "tco3",
+        "units": "kg/m2"
+    },
+    "dtype": "<f4",
+    "long_name": "total column ozone",
+    "units": "kg/m2"
+}

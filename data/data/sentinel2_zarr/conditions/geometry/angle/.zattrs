@@ -1,0 +1,10 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "angle"
+    ],
+    "dimensions": [
+        "angle"
+    ],
+    "dtype": "<U7",
+    "long_name": "zenith and azimuth angles"
+}

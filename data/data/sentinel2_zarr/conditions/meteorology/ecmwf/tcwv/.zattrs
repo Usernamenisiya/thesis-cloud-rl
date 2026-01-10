@@ -1,0 +1,23 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "total column vertically-integrated water vapour",
+        "short_name": "tcwv",
+        "units": "kg/m2"
+    },
+    "dtype": "<f4",
+    "long_name": "total column vertically-integrated water vapour",
+    "units": "kg/m2"
+}

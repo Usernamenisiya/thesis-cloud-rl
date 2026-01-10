@@ -1,0 +1,12 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "longitude"
+    ],
+    "dimensions": [
+        "longitude"
+    ],
+    "dtype": "<f4",
+    "long_name": "longitudes of ECMWF grid",
+    "standard_name": "longitude",
+    "units": "degrees_east"
+}

@@ -1,0 +1,11 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "x"
+    ],
+    "dimensions": [
+        "x"
+    ],
+    "dtype": "<f4",
+    "long_name": "x coordinates of the image at 10m in meters from up-left pixel",
+    "units": "m"
+}

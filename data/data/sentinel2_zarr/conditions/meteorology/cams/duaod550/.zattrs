@@ -1,0 +1,21 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "latitude",
+        "longitude"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "latitude",
+            "longitude"
+        ],
+        "dimensions": [
+            "latitude",
+            "longitude"
+        ],
+        "dtype": "<f4",
+        "long_name": "dust aerosol optical thickness at 550nm",
+        "short_name": "duaod550"
+    },
+    "dtype": "<f4",
+    "long_name": "dust aerosol optical thickness at 550nm"
+}

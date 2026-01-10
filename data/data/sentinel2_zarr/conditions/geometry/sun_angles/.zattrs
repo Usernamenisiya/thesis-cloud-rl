@@ -1,0 +1,26 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "angle",
+        "y",
+        "x"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "angle",
+            "y",
+            "x"
+        ],
+        "dimensions": [
+            "angle",
+            "y",
+            "x"
+        ],
+        "dtype": "<f8",
+        "long_name": "solar angles",
+        "short_name": "sun_angles",
+        "units": "degrees"
+    },
+    "dtype": "<f8",
+    "long_name": "solar angles",
+    "units": "degrees"
+}

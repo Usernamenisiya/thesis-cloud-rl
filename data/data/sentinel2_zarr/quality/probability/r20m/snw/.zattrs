@@ -1,0 +1,27 @@
+{
+    "_ARRAY_DIMENSIONS": [
+        "y",
+        "x"
+    ],
+    "_eopf_attrs": {
+        "coordinates": [
+            "y",
+            "x"
+        ],
+        "dimensions": [
+            "y",
+            "x"
+        ],
+        "dtype": "<f4",
+        "eopf_is_masked": true,
+        "fill_value": 101,
+        "long_name": "snow probability mask at 20m",
+        "short_name": "snw",
+        "units": "percentage",
+        "valid_max": 100,
+        "valid_min": 0
+    },
+    "dtype": "<f4",
+    "long_name": "snow probability mask at 20m",
+    "units": "percentage"
+}
