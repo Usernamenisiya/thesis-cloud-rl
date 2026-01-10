@@ -1,0 +1,11 @@
+torch>=2.0.0
+torchvision>=0.15.0
+s2cloudless
+stable-baselines3
+gym
+numpy
+opencv-python
+matplotlib
+scikit-learn
+rasterio
+zarr

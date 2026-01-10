@@ -1,0 +1,27 @@
+# Data files (large, shouldn't be in version control)
+data/sentinel2_zarr/
+data/*.tif
+data/*.zip
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter notebooks (optional - remove if you want to track them)
+# *.ipynb
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Model checkpoints and results
+*.pth
+*.pkl
+rl_cloud_refinement_model/
+training_results.json
