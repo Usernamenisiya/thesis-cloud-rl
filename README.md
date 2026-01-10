@@ -12,6 +12,20 @@ This project aims to improve cloud masking accuracy, especially for thin clouds,
      - Ground Truth: Use [CloudSEN12](https://zenodo.org/record/4172871) or create manually in QGIS.
    - Place in `data/` folder.
 
+## Recent Updates
+
+### RL Environment Fix (Jan 2026)
+**Issue**: Previous RL evaluation only predicted center pixels of patches, leading to 0 precision/recall/F1 scores.
+
+**Fix**: Updated `rl_environment.py` to:
+- Reward based on entire patch accuracy (0-1 range)
+- Return patch positions in `info` for proper evaluation
+- Fill entire patches during prediction instead of just centers
+
+**Testing**: Run `python test_evaluation.py` to verify the fix works.
+
+**Corrected Evaluation**: Use `python evaluate_rl_model.py` for proper RL model evaluation.
+
 ## Usage
 
 1. **Load Data**: Update paths in `train_dqn.py` for your Sentinel-2 image and ground truth mask.
