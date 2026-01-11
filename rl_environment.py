@@ -1,6 +1,6 @@
-import gym
+import gymnasium as gym
 import numpy as np
-from gym import spaces
+from gymnasium import spaces
 
 class CloudMaskRefinementEnv(gym.Env):
     """
@@ -8,7 +8,7 @@ class CloudMaskRefinementEnv(gym.Env):
     The agent observes a patch of the image and CNN probability, and decides if it's cloud.
     """
     def __init__(self, image, cnn_prob, ground_truth, patch_size=32):
-        super(CloudMaskRefinementEnv, self).__init__()
+        super().__init__()
         self.image = image  # (H, W, bands)
         self.cnn_prob = cnn_prob  # (H, W)
         self.ground_truth = ground_truth  # (H, W) binary
@@ -25,10 +25,11 @@ class CloudMaskRefinementEnv(gym.Env):
         self.current_pos = (0, 0)
         self.done = False
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)  # gymnasium requirement
         self.current_pos = (0, 0)
         self.done = False
-        return self._get_obs()
+        return self._get_obs(), {}  # gymnasium requires obs, info tuple
 
     def _get_obs(self):
         i, j = self.current_pos
@@ -89,7 +90,7 @@ class CloudMaskRefinementEnv(gym.Env):
         # Return patch position in info for evaluation
         info = {'patch_position': (i, j)} if not self.done else {}
 
-        return obs, reward, self.done, info
+        return obs, reward, self.done, False, info  # gymnasium requires 5 return values: obs, reward, terminated, truncated, info
 
     def render(self):
         pass

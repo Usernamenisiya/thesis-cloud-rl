@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 from stable_baselines3 import DQN
 from stable_baselines3.common.env_util import make_vec_env
 from rl_environment import CloudMaskRefinementEnv
