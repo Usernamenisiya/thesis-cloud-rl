@@ -51,27 +51,27 @@ class CloudMaskRefinementEnv(gym.Env):
         total_pixels = patch_gt.size
         cloud_pixels = np.sum(patch_gt == 1)
 
-        # BALANCED REWARD STRUCTURE - Optimize F1-Score (SCALED UP)
+        # BALANCED REWARD STRUCTURE - Optimize F1-Score (10X SCALED)
         if cloud_pixels == 0:
             # Pure clear sky patch - strongly reward correct clear
             if action == 0:
-                reward = 2.0  # Strong reward for correct clear
+                reward = 20.0  # Strong reward for correct clear
             else:
-                reward = -3.0  # Strong penalty for false positive
+                reward = -30.0  # Strong penalty for false positive
         elif cloud_pixels >= total_pixels * 0.3:
             # Significant clouds present - reward detection, moderate penalty for misses
             if action == 1:
-                reward = 3.0 + 2.0 * (cloud_pixels / total_pixels)  # Good reward for correct detection
+                reward = 30.0 + 20.0 * (cloud_pixels / total_pixels)  # Good reward for correct detection
                 self.episode_clouds_detected += 1
             else:
-                reward = -2.0 * (cloud_pixels / total_pixels)  # Moderate penalty for missing clouds
+                reward = -20.0 * (cloud_pixels / total_pixels)  # Moderate penalty for missing clouds
         else:
             # Few clouds - balance precision and recall
             if action == 1:
-                reward = 1.0 * (cloud_pixels / total_pixels)  # Reward for partial clouds
+                reward = 10.0 * (cloud_pixels / total_pixels)  # Reward for partial clouds
                 self.episode_clouds_detected += 1
             else:
-                reward = -1.0 * (cloud_pixels / total_pixels)  # Penalty for missing few clouds
+                reward = -10.0 * (cloud_pixels / total_pixels)  # Penalty for missing few clouds
 
         # Debug output (after reward calculation)
         if self.episode_steps % 100 == 0:  # Only print every 100 steps to avoid spam
@@ -92,7 +92,7 @@ class CloudMaskRefinementEnv(gym.Env):
 
         # Episode-end penalty if agent detected ZERO clouds
         if self.done and self.episode_clouds_detected == 0:
-            reward -= 1.0
+            reward -= 10.0
 
         info = {'patch_position': (i, j)} if not self.done else {
             'clouds_detected': self.episode_clouds_detected,
