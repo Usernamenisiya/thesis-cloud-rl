@@ -94,19 +94,19 @@ def train_ppo():
     print("\n🎮 Creating RL environment...")
     env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
     
-    # PPO configuration - BALANCED for optimal F1-Score
+    # PPO configuration - BALANCED for optimal F1-Score with stable value learning
     print("🎯 Using BALANCED reward configuration for optimal F1-Score")
     ppo_config = {
-        "learning_rate": 5e-4,          # Higher LR for faster learning with scaled rewards
+        "learning_rate": 5e-4,          # Higher LR for faster learning
         "n_steps": 1024,                # Smaller rollout for more frequent updates
         "batch_size": 64,               # Mini-batch size
         "n_epochs": 10,                 # Number of epochs for SGD
         "gamma": 0.99,                  # Discount factor
         "gae_lambda": 0.95,             # GAE lambda for advantage estimation
         "clip_range": 0.2,              # Standard clipping
-        "clip_range_vf": None,          # Clip value function
+        "clip_range_vf": 10.0,          # Clip value function for stability!
         "ent_coef": 0.02,               # Moderate entropy for exploration
-        "vf_coef": 0.5,                 # Value function coefficient
+        "vf_coef": 1.0,                 # HIGHER value function coefficient for better learning
         "max_grad_norm": 0.5,           # Gradient clipping
         "use_sde": False,               # State-dependent exploration
         "sde_sample_freq": -1,
