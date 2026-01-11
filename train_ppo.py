@@ -174,14 +174,14 @@ def train_ppo():
     eval_env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
     rl_predictions = np.zeros_like(ground_truth, dtype=np.uint8)
     
-    obs = eval_env.reset()
+    obs, _ = eval_env.reset()  # Gymnasium returns (obs, info)
     done = False
     step_count = 0
     
     print("\nGenerating predictions...")
     while not done:
         action, _ = model.predict(obs, deterministic=True)
-        obs, reward, done, info = eval_env.step(action)
+        obs, reward, done, truncated, info = eval_env.step(action)  # Gymnasium returns 5 values
         
         if 'patch_position' in info:
             row, col = info['patch_position']
