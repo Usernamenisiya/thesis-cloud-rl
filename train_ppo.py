@@ -53,18 +53,24 @@ class TrainingProgressCallback(BaseCallback):
         super().__init__(verbose)
         self.check_freq = check_freq
         self.start_time = time.time()
-        self.rewards = []
-        self.episode_rewards = []
+        self.reward_sum = 0
+        self.step_count = 0
 
     def _on_step(self) -> bool:
-        # Collect rewards from the current step
-        if hasattr(self.locals, 'rewards') and len(self.locals['rewards']) > 0:
-            self.rewards.append(self.locals['rewards'][-1])
+        # Accumulate rewards from each step
+        if 'rewards' in self.locals:
+            reward = self.locals['rewards'][0]  # Get reward from current step
+            self.reward_sum += reward
+            self.step_count += 1
 
         if self.num_timesteps % self.check_freq == 0:
             elapsed = time.time() - self.start_time
-            mean_reward = sum(self.rewards[-self.check_freq:]) / len(self.rewards[-self.check_freq:]) if self.rewards else 0
+            mean_reward = self.reward_sum / self.step_count if self.step_count > 0 else 0
             print(f"Timestep {self.num_timesteps}: {elapsed:.1f}s elapsed, Mean Reward: {mean_reward:.4f}")
+
+            # Reset for next interval
+            self.reward_sum = 0
+            self.step_count = 0
         return True
 
 def train_ppo():
