@@ -97,15 +97,15 @@ def train_ppo():
     # PPO configuration - BALANCED for optimal F1-Score
     print("🎯 Using BALANCED reward configuration for optimal F1-Score")
     ppo_config = {
-        "learning_rate": 3e-4,          # Moderate LR for stable learning
-        "n_steps": 2048,                # Standard rollout size
+        "learning_rate": 5e-4,          # Higher LR for faster learning with scaled rewards
+        "n_steps": 1024,                # Smaller rollout for more frequent updates
         "batch_size": 64,               # Mini-batch size
         "n_epochs": 10,                 # Number of epochs for SGD
         "gamma": 0.99,                  # Discount factor
         "gae_lambda": 0.95,             # GAE lambda for advantage estimation
         "clip_range": 0.2,              # Standard clipping
         "clip_range_vf": None,          # Clip value function
-        "ent_coef": 0.01,               # Lower entropy for more deterministic policies
+        "ent_coef": 0.02,               # Moderate entropy for exploration
         "vf_coef": 0.5,                 # Value function coefficient
         "max_grad_norm": 0.5,           # Gradient clipping
         "use_sde": False,               # State-dependent exploration
@@ -155,7 +155,7 @@ def train_ppo():
     print("🚀 Starting PPO Training")
     print("=" * 60)
     
-    total_timesteps = 100000
+    total_timesteps = 500000
     print(f"Training for {total_timesteps:,} timesteps...")
     print("This will take approximately 1-2 hours with GPU...")
     
