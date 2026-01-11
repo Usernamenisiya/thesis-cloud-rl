@@ -260,7 +260,18 @@ def train_ppo():
             "precision_delta": float(ppo_precision - cnn_precision),
             "recall_delta": float(ppo_recall - cnn_recall)
         },
-        "ppo_config": ppo_config,
+        "ppo_config": {
+            "learning_rate": ppo_config["learning_rate"],
+            "n_steps": ppo_config["n_steps"],
+            "batch_size": ppo_config["batch_size"],
+            "n_epochs": ppo_config["n_epochs"],
+            "gamma": ppo_config["gamma"],
+            "ent_coef": ppo_config["ent_coef"],
+            "clip_range": ppo_config["clip_range"],
+            "features_extractor": "CustomCNN",
+            "features_dim": 256,
+            "net_arch": "pi=[256,256], vf=[256,256]"
+        },
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
     }
     
