@@ -1,7 +1,9 @@
 import numpy as np
 import torch
+import torch.nn as nn
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
+from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
 import time
 import json
 from pathlib import Path
@@ -9,6 +11,41 @@ from cnn_inference import load_sentinel2_image, get_cloud_mask
 from rl_environment import CloudMaskRefinementEnv
 import rasterio
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+import gymnasium as gym
+
+
+class CustomCNN(BaseFeaturesExtractor):
+    """
+    Custom CNN feature extractor for multi-channel satellite imagery.
+    Handles 11-channel input (10 Sentinel-2 bands + 1 CNN probability).
+    """
+    def __init__(self, observation_space: gym.spaces.Box, features_dim: int = 256):
+        super().__init__(observation_space, features_dim)
+        
+        n_input_channels = observation_space.shape[0]  # 11 channels
+        
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.Flatten(),
+        )
+        
+        # Compute shape by doing one forward pass
+        with torch.no_grad():
+            sample = torch.as_tensor(observation_space.sample()[None]).float()
+            n_flatten = self.cnn(sample).shape[1]
+        
+        self.linear = nn.Sequential(
+            nn.Linear(n_flatten, features_dim),
+            nn.ReLU(),
+        )
+    
+    def forward(self, observations: torch.Tensor) -> torch.Tensor:
+        return self.linear(self.cnn(observations))
 
 class TrainingProgressCallback(BaseCallback):
     """Custom callback to monitor training progress"""
@@ -62,13 +99,16 @@ def train_ppo():
         "sde_sample_freq": -1,
         "target_kl": None,              # Target KL divergence
         "policy_kwargs": {
-            "net_arch": [dict(pi=[256, 256], vf=[256, 256])],  # Network architecture
+            "features_extractor_class": CustomCNN,
+            "features_extractor_kwargs": {"features_dim": 256},
+            "net_arch": dict(pi=[256, 256], vf=[256, 256]),  # Updated format for SB3 v1.8+
             "activation_fn": torch.nn.ReLU,
+            "normalize_images": False,  # We handle normalization ourselves
         }
     }
     
     # Create PPO model
-    print("\n🧠 Creating PPO model with configuration:")
+    print("\n🧠 Creating PPO model with CUSTOM CNN for 11-channel input:")
     for key, value in ppo_config.items():
         if key != "policy_kwargs":
             print(f"   {key}: {value}")
