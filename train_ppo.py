@@ -157,7 +157,7 @@ def train_ppo():
     
     total_timesteps = 500000
     print(f"Training for {total_timesteps:,} timesteps...")
-    print("This will take approximately 1-2 hours with GPU...")
+    print("This will take approximately 20-25 minutes with GPU...")
     
     callback = TrainingProgressCallback(check_freq=5000)
     
@@ -173,11 +173,14 @@ def train_ppo():
     print(f"✅ Training completed in {training_time:.1f} seconds ({training_time/60:.1f} minutes)")
     print("=" * 60)
     
-    # Save the model
-    model_path = "models/ppo_cloud_refinement_model"
+    # Save the model with timestamp to avoid conflicts
+    import datetime
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    model_path = f"models/ppo_cloud_refinement_model_{timestamp}"
     Path("models").mkdir(exist_ok=True)
     model.save(model_path)
     print(f"\n💾 Model saved to: {model_path}")
+    print(f"🔍 Model params hash: {hash(str(model.get_parameters()))}")  # Debug
     
     # Evaluate on test data
     print("\n" + "=" * 60)
@@ -192,6 +195,7 @@ def train_ppo():
     step_count = 0
     
     print("\nGenerating predictions...")
+    print(f"🔍 Using trained model for evaluation (params hash: {hash(str(model.get_parameters()))})")  # Debug
     while not done:
         action, _ = model.predict(obs, deterministic=True)
         obs, reward, done, truncated, info = eval_env.step(action)  # Gymnasium returns 5 values

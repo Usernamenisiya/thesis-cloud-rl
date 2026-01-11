@@ -9,6 +9,7 @@ class CloudMaskRefinementEnv(gym.Env):
     """
     def __init__(self, image, cnn_prob, ground_truth, patch_size=64):
         super().__init__()
+        print("🔧 Initializing CloudMaskRefinementEnv with 10X SCALED BALANCED REWARDS")  # Debug
         self.image = image  # (H, W, bands)
         self.cnn_prob = cnn_prob  # (H, W)
         self.ground_truth = ground_truth  # (H, W) binary
