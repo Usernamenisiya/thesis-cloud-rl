@@ -52,6 +52,7 @@ class CloudMaskRefinementEnv(gym.Env):
         cloud_pixels = np.sum(patch_gt == 1)
 
         # BALANCED REWARD STRUCTURE - Optimize F1-Score (SCALED UP)
+        print(f"DEBUG: cloud_pixels={cloud_pixels}, action={action}, reward={reward:.3f}")  # DEBUG
         if cloud_pixels == 0:
             # Pure clear sky patch - strongly reward correct clear
             if action == 0:

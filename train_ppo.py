@@ -53,11 +53,17 @@ class TrainingProgressCallback(BaseCallback):
         super().__init__(verbose)
         self.check_freq = check_freq
         self.start_time = time.time()
+        self.rewards = []
+        self.episode_rewards = []
 
     def _on_step(self) -> bool:
+        # Collect rewards from the current step
+        if hasattr(self.locals, 'rewards') and len(self.locals['rewards']) > 0:
+            self.rewards.append(self.locals['rewards'][-1])
+
         if self.num_timesteps % self.check_freq == 0:
             elapsed = time.time() - self.start_time
-            mean_reward = self.model.last_mean_reward if hasattr(self.model, 'last_mean_reward') else 0
+            mean_reward = sum(self.rewards[-self.check_freq:]) / len(self.rewards[-self.check_freq:]) if self.rewards else 0
             print(f"Timestep {self.num_timesteps}: {elapsed:.1f}s elapsed, Mean Reward: {mean_reward:.4f}")
         return True
 
