@@ -83,6 +83,7 @@ def train_ppo():
     env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
     
     # PPO configuration - BALANCED for optimal F1-Score
+    print("🎯 Using BALANCED reward configuration for optimal F1-Score")
     ppo_config = {
         "learning_rate": 3e-4,          # Moderate LR for stable learning
         "n_steps": 2048,                # Standard rollout size
