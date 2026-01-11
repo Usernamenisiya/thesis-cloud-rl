@@ -51,21 +51,20 @@ class CloudMaskRefinementEnv(gym.Env):
         total_pixels = patch_gt.size
         cloud_pixels = np.sum(patch_gt == 1)
 
-        # BALANCED REWARD STRUCTURE - Optimize F1-Score
-        print(f"DEBUG: Using BALANCED rewards - cloud_pixels={cloud_pixels}, action={action}")  # DEBUG
+        # BALANCED REWARD STRUCTURE - Optimize F1-Score (ENHANCED)
         if cloud_pixels == 0:
-            # Pure clear sky patch
+            # Pure clear sky patch - strongly reward correct clear
             if action == 0:
-                reward = 0.1  # Small reward for correct clear
+                reward = 0.5  # Strong reward for correct clear
             else:
-                reward = -0.8  # Moderate penalty for false positive
+                reward = -1.5  # Strong penalty for false positive
         elif cloud_pixels >= total_pixels * 0.3:
             # Significant clouds present - prioritize detection but penalize over-prediction
             if action == 1:
                 reward = 0.8 + (cloud_pixels / total_pixels)  # Good reward for correct detection
                 self.episode_clouds_detected += 1
             else:
-                reward = -1.2 * (cloud_pixels / total_pixels)  # Moderate penalty for missing clouds
+                reward = -0.8 * (cloud_pixels / total_pixels)  # Moderate penalty for missing clouds
         else:
             # Few clouds - balance precision and recall
             if action == 1:
