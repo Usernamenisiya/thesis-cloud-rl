@@ -45,17 +45,17 @@ def train_ppo():
     print("\n🎮 Creating RL environment...")
     env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
     
-    # PPO configuration - optimized for better exploration and stability
+    # PPO configuration - AGGRESSIVE for forcing cloud detection
     ppo_config = {
-        "learning_rate": 3e-4,          # PPO typically uses higher LR than DQN
-        "n_steps": 2048,                # Rollout buffer size (larger for PPO)
+        "learning_rate": 5e-4,          # Higher LR for faster adaptation
+        "n_steps": 1024,                # Smaller rollout for faster updates
         "batch_size": 64,               # Mini-batch size
         "n_epochs": 10,                 # Number of epochs for SGD
         "gamma": 0.99,                  # Discount factor
         "gae_lambda": 0.95,             # GAE lambda for advantage estimation
-        "clip_range": 0.2,              # PPO clipping range
-        "clip_range_vf": None,          # Clip value function (None = same as clip_range)
-        "ent_coef": 0.01,               # Entropy coefficient for exploration
+        "clip_range": 0.3,              # More aggressive clipping
+        "clip_range_vf": None,          # Clip value function
+        "ent_coef": 0.05,               # HIGHER entropy - more exploration
         "vf_coef": 0.5,                 # Value function coefficient
         "max_grad_norm": 0.5,           # Gradient clipping
         "use_sde": False,               # State-dependent exploration

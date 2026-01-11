@@ -5,9 +5,9 @@ from gymnasium import spaces
 class CloudMaskRefinementEnv(gym.Env):
     """
     Custom environment for refining cloud masks using RL.
-    The agent observes a patch of the image and CNN probability, and decides if it's cloud.
+    AGGRESSIVE reward structure to force cloud detection.
     """
-    def __init__(self, image, cnn_prob, ground_truth, patch_size=32):
+    def __init__(self, image, cnn_prob, ground_truth, patch_size=64):
         super().__init__()
         self.image = image  # (H, W, bands)
         self.cnn_prob = cnn_prob  # (H, W)
@@ -24,12 +24,16 @@ class CloudMaskRefinementEnv(gym.Env):
 
         self.current_pos = (0, 0)
         self.done = False
+        self.episode_clouds_detected = 0
+        self.episode_steps = 0
 
     def reset(self, seed=None, options=None):
-        super().reset(seed=seed)  # gymnasium requirement
+        super().reset(seed=seed)
         self.current_pos = (0, 0)
         self.done = False
-        return self._get_obs(), {}  # gymnasium requires obs, info tuple
+        self.episode_clouds_detected = 0
+        self.episode_steps = 0
+        return self._get_obs(), {}
 
     def _get_obs(self):
         i, j = self.current_pos
@@ -42,41 +46,36 @@ class CloudMaskRefinementEnv(gym.Env):
 
     def step(self, action):
         i, j = self.current_pos
-        # Get the entire patch ground truth
         patch_gt = self.ground_truth[i:i+self.patch_size, j:j+self.patch_size]
-
-        # Calculate rewards based on patch-level performance
-        patch_pred = np.full_like(patch_gt, action)  # Predict same action for entire patch
-
-        # Calculate true positives, false positives, false negatives
-        tp = np.sum((patch_pred == 1) & (patch_gt == 1))  # Correctly predicted clouds
-        fp = np.sum((patch_pred == 1) & (patch_gt == 0))  # Incorrectly predicted clouds
-        fn = np.sum((patch_pred == 0) & (patch_gt == 1))  # Missed clouds
-        tn = np.sum((patch_pred == 0) & (patch_gt == 0))  # Correctly predicted clear
 
         total_pixels = patch_gt.size
         cloud_pixels = np.sum(patch_gt == 1)
-        clear_pixels = np.sum(patch_gt == 0)
 
-        # Balanced reward structure
+        # AGGRESSIVE REWARD STRUCTURE - Force cloud detection
         if cloud_pixels == 0:
-            # No clouds in patch - reward for correct clear prediction
-            reward = 1.0 if action == 0 else -0.5
+            # Pure clear sky patch
+            if action == 0:
+                reward = 0.0  # Neutral for correct clear
+            else:
+                reward = -2.0  # SEVERE penalty for false positive
+        elif cloud_pixels >= total_pixels * 0.3:
+            # Significant clouds present - MUST detect
+            if action == 1:
+                reward = 1.0 + (cloud_pixels / total_pixels)  # Reward based on cloud proportion
+                self.episode_clouds_detected += 1
+            else:
+                reward = -2.0 * (cloud_pixels / total_pixels)  # SEVERE penalty for missing clouds
         else:
-            # Clouds present - balance precision and recall
-            precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-            recall = tp / cloud_pixels if cloud_pixels > 0 else 0
+            # Few clouds - balance detection vs false positives
+            if action == 1:
+                reward = 0.5 * (cloud_pixels / total_pixels)
+                self.episode_clouds_detected += 1
+            else:
+                reward = -0.5 * (cloud_pixels / total_pixels)
 
-            # Reward = heavily weighted towards precision to prevent over-detection
-            reward = 0.8 * precision + 0.2 * recall
+        self.episode_steps += 1
 
-            # Stronger penalties for false positives
-            if action == 1 and fp > 0:  # Predicted clouds incorrectly
-                reward -= 0.5 * (fp / total_pixels)  # Increased penalty for false positives
-            if action == 0 and fn > 0:  # Missed clouds
-                reward -= 0.3 * (fn / cloud_pixels)  # Reduced penalty for missing clouds
-
-        # Move to next patch (simple grid traversal)
+        # Move to next patch
         j += self.patch_size
         if j >= self.W - self.patch_size:
             j = 0
@@ -87,10 +86,16 @@ class CloudMaskRefinementEnv(gym.Env):
         self.current_pos = (i, j)
         obs = self._get_obs() if not self.done else np.zeros(self.observation_space.shape)
 
-        # Return patch position in info for evaluation
-        info = {'patch_position': (i, j)} if not self.done else {}
+        # Episode-end penalty if agent detected ZERO clouds
+        if self.done and self.episode_clouds_detected == 0:
+            reward -= 1.0
 
-        return obs, reward, self.done, False, info  # gymnasium requires 5 return values: obs, reward, terminated, truncated, info
+        info = {'patch_position': (i, j)} if not self.done else {
+            'clouds_detected': self.episode_clouds_detected,
+            'episode_steps': self.episode_steps
+        }
+
+        return obs, reward, self.done, False, info
 
     def render(self):
         pass
