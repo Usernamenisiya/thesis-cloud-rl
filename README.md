@@ -2,15 +2,31 @@
 
 This project aims to improve cloud masking accuracy, especially for thin clouds, by using a pre-trained CNN (s2cloudless) and refining its output with Reinforcement Learning (DQN).
 
-## Setup
+## Data Setup
 
-1. Install dependencies: `pip install -r requirements.txt`
-2. **Data Preparation**:
-   - **Automatic Download**: Run `python data_download.py` to download a sample Sentinel-2 image from the s2cloudless repo and create a dummy ground truth mask.
-   - **Manual Download** (for real data):
-     - Sentinel-2: Download L2A .zip from [ESA Samples](https://sentinel.esa.int/web/sentinel/sample-products), unzip, and stack bands B01-B12 into a single .tif using GDAL.
-     - Ground Truth: Use [CloudSEN12](https://zenodo.org/record/4172871) or create manually in QGIS.
-   - Place in `data/` folder.
+### Option 1: Google Drive (Recommended)
+For persistent storage across Colab sessions:
+
+1. Create folder: `Colab_Data/thesis_cloud_rl/` in your Google Drive
+2. Upload your data files there
+3. Run the Google Drive mounting cell in `colab_training.ipynb`
+
+**Benefits:** No re-uploading needed!
+
+### Option 2: Cloud Storage Downloads
+Use `setup_cloud_data.py` for automatic downloads:
+
+```bash
+python setup_cloud_data.py
+```
+
+Supports Dropbox, OneDrive, Google Drive, and direct URLs.
+
+### Option 3: Manual Upload
+Upload files directly to Colab (temporary, resets each session).
+
+### Option 4: Automatic Dataset Download
+Modify `data_download.py` to fetch from public datasets like CloudSEN12.
 
 ## Recent Updates
 
