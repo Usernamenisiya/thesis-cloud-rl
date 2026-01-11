@@ -29,12 +29,26 @@ assert image.shape[:2] == ground_truth.shape, "Image and ground truth shapes mus
 # Create environment
 env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth)
 
-# Train DQN
-model = DQN("CnnPolicy", env, verbose=1, buffer_size=10000, learning_starts=1000)
-model.learn(total_timesteps=10000)
+# Train DQN with improved parameters for better exploration and convergence
+model = DQN(
+    "CnnPolicy",
+    env,
+    verbose=1,
+    buffer_size=50000,  # Increased buffer for better experience replay
+    learning_starts=2000,  # Start learning later for more exploration
+    learning_rate=1e-4,
+    batch_size=32,
+    target_update_interval=1000,
+    train_freq=(4, "step"),
+    gradient_steps=1,
+    exploration_fraction=0.3,  # Increased exploration (was 0.1)
+    exploration_final_eps=0.05,  # Higher final epsilon for continued exploration
+)
+print("Training for 100,000 timesteps with improved exploration parameters...")
+model.learn(total_timesteps=100000)  # Increased from 10k to 100k for better convergence
 
 # Save model
-model.save("dqn_cloud_refinement")
+model.save("rl_cloud_refinement_model")  # Updated to match notebook expectations
 
 # To evaluate
 obs = env.reset()

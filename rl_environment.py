@@ -43,11 +43,35 @@ class CloudMaskRefinementEnv(gym.Env):
         i, j = self.current_pos
         # Get the entire patch ground truth
         patch_gt = self.ground_truth[i:i+self.patch_size, j:j+self.patch_size]
-        # Reward based on patch accuracy (fraction of correct pixels)
+
+        # Calculate rewards based on patch-level performance
         patch_pred = np.full_like(patch_gt, action)  # Predict same action for entire patch
-        correct_pixels = np.sum(patch_pred == patch_gt)
+
+        # Calculate true positives, false positives, false negatives
+        tp = np.sum((patch_pred == 1) & (patch_gt == 1))  # Correctly predicted clouds
+        fp = np.sum((patch_pred == 1) & (patch_gt == 0))  # Incorrectly predicted clouds
+        fn = np.sum((patch_pred == 0) & (patch_gt == 1))  # Missed clouds
+        tn = np.sum((patch_pred == 0) & (patch_gt == 0))  # Correctly predicted clear
+
         total_pixels = patch_gt.size
-        reward = correct_pixels / total_pixels  # Reward between 0 and 1
+        cloud_pixels = np.sum(patch_gt == 1)
+        clear_pixels = np.sum(patch_gt == 0)
+
+        # Balanced reward structure
+        if cloud_pixels == 0:
+            # No clouds in patch - reward for correct clear prediction
+            reward = 1.0 if action == 0 else -0.5
+        else:
+            # Clouds present - balance precision and recall
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+            recall = tp / cloud_pixels if cloud_pixels > 0 else 0
+
+            # Reward = weighted combination of precision and recall
+            reward = 0.6 * precision + 0.4 * recall
+
+            # Bonus for high recall, penalty for zero predictions
+            if action == 0:  # Predicted no clouds when clouds exist
+                reward -= 0.3  # Penalty for missing clouds
 
         # Move to next patch (simple grid traversal)
         j += self.patch_size
