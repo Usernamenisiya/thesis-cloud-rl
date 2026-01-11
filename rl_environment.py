@@ -66,14 +66,14 @@ class CloudMaskRefinementEnv(gym.Env):
             precision = tp / (tp + fp) if (tp + fp) > 0 else 0
             recall = tp / cloud_pixels if cloud_pixels > 0 else 0
 
-            # Reward = weighted combination of precision and recall with stronger precision emphasis
-            reward = 0.7 * precision + 0.3 * recall
+            # Reward = heavily weighted towards precision to prevent over-detection
+            reward = 0.8 * precision + 0.2 * recall
 
-            # Penalties for false positives and missed clouds
+            # Stronger penalties for false positives
             if action == 1 and fp > 0:  # Predicted clouds incorrectly
-                reward -= 0.2 * (fp / total_pixels)  # Penalty proportional to false positive rate
+                reward -= 0.5 * (fp / total_pixels)  # Increased penalty for false positives
             if action == 0 and fn > 0:  # Missed clouds
-                reward -= 0.4 * (fn / cloud_pixels)  # Stronger penalty for missing clouds
+                reward -= 0.3 * (fn / cloud_pixels)  # Reduced penalty for missing clouds
 
         # Move to next patch (simple grid traversal)
         j += self.patch_size
