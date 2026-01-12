@@ -93,9 +93,9 @@ def train_finetuned_model(train_loader, val_loader, epochs=10, lr=0.001):
     model = FineTunedCloudDetector().to(device)
     
     # Use weighted loss to handle class imbalance
-    # Cloud pixels (1) are ~16%, clear (0) are ~84%
-    # Weight clouds 5x higher to encourage detection
-    pos_weight = torch.tensor([5.0]).to(device)
+    # Cloud pixels (1) are ~14-16%, clear (0) are ~84-86%
+    # Weight clouds 2x higher (reduced from 5x for stability)
+    pos_weight = torch.tensor([2.0]).to(device)
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
@@ -199,7 +199,7 @@ def finetune_cnn():
     # Train
     print("\n🚀 Starting fine-tuning...")
     print("⚙️  With 100 patches and GPU, this should take ~15-20 minutes")
-    model = train_finetuned_model(train_loader, val_loader, epochs=30, lr=0.001)
+    model = train_finetuned_model(train_loader, val_loader, epochs=30, lr=0.0003)  # Reduced LR for stability
     
     # Save model
     torch.save(model.state_dict(), 'models/finetuned_s2cloudless.pth')
