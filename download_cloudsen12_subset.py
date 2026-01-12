@@ -20,8 +20,9 @@ def download_cloudsen12_subset():
     
     from datasets import load_dataset
     
-    # Create output directory
-    output_dir = Path("/content/drive/MyDrive/cloudsen12_data")
+    # Create output directory in your existing structure
+    base_path = Path("/content/drive/MyDrive/Colab_Data")
+    output_dir = base_path / "cloudsen12_subset"
     output_dir.mkdir(parents=True, exist_ok=True)
     
     print(f"\n💾 Saving to: {output_dir}")
