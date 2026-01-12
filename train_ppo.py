@@ -192,26 +192,32 @@ def train_ppo():
     eval_env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
     rl_predictions = np.zeros_like(ground_truth, dtype=np.uint8)
     
-    obs, _ = eval_env.reset()  # Gymnasium returns (obs, info)
-    done = False
-    step_count = 0
-    
     print("\nGenerating predictions...")
-    print(f"🔍 Using trained model for evaluation (params hash: {hash(str(model.get_parameters()))})")  # Debug
-    while not done:
-        action, _ = model.predict(obs, deterministic=True)
-        obs, reward, done, truncated, info = eval_env.step(action)  # Gymnasium returns 5 values
-        
-        if 'patch_position' in info:
-            row, col = info['patch_position']
-            patch_size = eval_env.patch_size
-            rl_predictions[row:row+patch_size, col:col+patch_size] = action
-        
-        step_count += 1
-        if step_count % 10000 == 0:
-            print(f"  Evaluation step: {step_count}")
+    print(f"🔍 Using trained model for evaluation (params hash: {hash(str(model.get_parameters()))})")
     
-    print(f"✅ Evaluation completed in {step_count} steps")
+    # Evaluate all patches (each is a separate episode in episode-per-patch design)
+    num_patches = len(eval_env.all_positions)
+    
+    for patch_idx in range(num_patches):
+        obs, _ = eval_env.reset()  # Get next patch
+        
+        # Get current patch position
+        i, j = eval_env.current_pos
+        patch_size = eval_env.patch_size
+        
+        # Get action from model
+        action, _ = model.predict(obs, deterministic=True)
+        
+        # Store prediction for the current patch
+        rl_predictions[i:i+patch_size, j:j+patch_size] = action
+        
+        # Step (episode ends immediately)
+        obs, reward, done, truncated, info = eval_env.step(action)
+        
+        if (patch_idx + 1) % 1000 == 0:
+            print(f"  Evaluated {patch_idx + 1}/{num_patches} patches")
+    
+    print(f"✅ Evaluation completed: {num_patches} patches")
     
     # Calculate metrics
     gt_binary = (ground_truth > 0).astype(np.uint8)
