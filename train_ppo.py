@@ -323,9 +323,9 @@ def train_ppo():
     
     print(f"\n💾 Results saved to: {results_path}")
     
-    # Save refined mask
+    # Save refined mask using CloudSEN12 mask as reference
     refined_mask_path = "data/ppo_refined_cloud_mask.tif"
-    with rasterio.open('data/ground_truth.tif') as src:
+    with rasterio.open(mask_files[0]) as src:
         profile = src.profile.copy()
         profile.update(count=1, dtype='uint8')
         
