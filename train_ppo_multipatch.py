@@ -70,7 +70,7 @@ class MultiPatchEnv:
         self.image_paths = image_paths
         self.mask_paths = mask_paths
         self.patch_size = patch_size
-        self.detector = S2PixelCloudDetector(threshold=0.5, all_bands=True, average_over=1, dilation_size=0)
+        self.detector = S2PixelCloudDetector(threshold=0.5, all_bands=False, average_over=1, dilation_size=0)
         
         # Load first patch to get observation space
         self._load_patch(0)
