@@ -75,15 +75,15 @@ class FineTunedCloudDetector(nn.Module):
             nn.ReLU(),
             nn.Conv2d(32, 16, kernel_size=3, padding=1),
             nn.ReLU(),
-            nn.Conv2d(16, 1, kernel_size=1),
-            nn.Sigmoid()
+            nn.Conv2d(16, 1, kernel_size=1)
+            # No sigmoid here - BCEWithLogitsLoss expects logits
         )
     
     def forward(self, images, s2cloudless_probs):
         # Concatenate original images with s2cloudless probabilities
         x = torch.cat([images, s2cloudless_probs], dim=1)  # (batch, 11, H, W)
         output = self.refiner(x)
-        return output.squeeze(1)  # (batch, H, W)
+        return output.squeeze(1)  # (batch, H, W) - returns logits, not probabilities
 
 def train_finetuned_model(train_loader, val_loader, epochs=10, lr=0.001):
     """Train fine-tuned model."""
@@ -91,7 +91,12 @@ def train_finetuned_model(train_loader, val_loader, epochs=10, lr=0.001):
     print(f"🖥️  Using device: {device}")
     
     model = FineTunedCloudDetector().to(device)
-    criterion = nn.BCELoss()
+    
+    # Use weighted loss to handle class imbalance
+    # Cloud pixels (1) are ~16%, clear (0) are ~84%
+    # Weight clouds 5x higher to encourage detection
+    pos_weight = torch.tensor([5.0]).to(device)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weight)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
     best_f1 = 0
@@ -134,7 +139,8 @@ def train_finetuned_model(train_loader, val_loader, epochs=10, lr=0.001):
                 s2cloudless_probs = get_s2cloudless_features(images).to(device)
                 outputs = model(images, s2cloudless_probs)
                 
-                preds = (outputs > 0.5).float()
+                # Apply sigmoid for predictions (since we're using BCEWithLogitsLoss)
+                preds = (torch.sigmoid(outputs) > 0.5).float()
                 val_preds.append(preds.cpu().numpy().flatten())
                 val_targets.append(masks.cpu().numpy().flatten())
         
@@ -214,7 +220,8 @@ def finetune_cnn():
             s2cloudless_probs = get_s2cloudless_features(images).to(device)
             outputs = model(images, s2cloudless_probs)
             
-            preds = (outputs > 0.5).float()
+            # Apply sigmoid for predictions
+            preds = (torch.sigmoid(outputs) > 0.5).float()
             all_preds.append(preds.cpu().numpy().flatten())
             all_targets.append(masks.cpu().numpy().flatten())
     
