@@ -4,6 +4,7 @@ PPO Training with Multiple Training Patches for Better Generalization
 import numpy as np
 import rasterio
 import torch
+import gymnasium as gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import DummyVecEnv
@@ -62,11 +63,12 @@ class TrainingProgressCallback(BaseCallback):
             print(f"Timestep {self.n_calls}: {elapsed:.1f}s elapsed, Mean Reward: {mean_reward:.4f}")
         return True
 
-class MultiPatchEnv:
+class MultiPatchEnv(gym.Env):
     """
     Wrapper that samples from multiple training patches
     """
     def __init__(self, image_paths, mask_paths, patch_size=64):
+        super().__init__()
         self.image_paths = image_paths
         self.mask_paths = mask_paths
         self.patch_size = patch_size
