@@ -94,6 +94,9 @@ def optimize_cnn_threshold():
     
     # Save optimal threshold
     import json
+    from pathlib import Path
+    
+    Path('results').mkdir(exist_ok=True)
     with open('results/optimal_cnn_threshold.json', 'w') as f:
         json.dump({
             'optimal_threshold': best_result['threshold'],
