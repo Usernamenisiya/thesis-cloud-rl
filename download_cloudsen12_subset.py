@@ -40,10 +40,10 @@ def download_cloudsen12_subset():
         
         print("\n✅ Dataset loaded successfully!")
         print("\n📊 Downloading subset...")
-        print("Target: 150-200 patches (~4-5 GB)")
+        print("Target: 100 patches (~2.5 GB)")
         
-        # Take first 150 samples
-        subset_size = 150
+        # Take first 100 samples
+        subset_size = 100
         downloaded = 0
         
         for idx, sample in enumerate(dataset):
@@ -98,7 +98,7 @@ if __name__ == "__main__":
 ╔════════════════════════════════════════════════════════════╗
 ║           CloudSEN12 Subset Download Script                ║
 ║                                                            ║
-║  This script downloads ~150 patches (4-5 GB) to your      ║
+║  This script downloads ~100 patches (2.5 GB) to your      ║
 ║  Google Drive for thesis validation.                      ║
 ╚════════════════════════════════════════════════════════════╝
 
@@ -107,7 +107,7 @@ if __name__ == "__main__":
    - Mount Google Drive first: 
      from google.colab import drive
      drive.mount('/content/drive')
-   - Ensure you have ~5GB free in Drive
+   - Ensure you have ~3GB free in Drive
 
 Press Enter to continue or Ctrl+C to cancel...
 """)

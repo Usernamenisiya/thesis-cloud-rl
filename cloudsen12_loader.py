@@ -166,5 +166,5 @@ if __name__ == "__main__":
     prepare_cloudsen12_for_training(
         cloudsen_dir=cloudsen_dir,
         output_dir=output_dir,
-        num_patches=5  # Start with 5 patches for testing
+        num_patches=100  # Process all 100 patches
     )
