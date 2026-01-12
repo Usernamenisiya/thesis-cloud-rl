@@ -87,13 +87,13 @@ class MultiPatchEnv:
         """Load a specific patch"""
         # Load image
         with rasterio.open(self.image_paths[idx]) as src:
-            image = src.read()
-            image = np.transpose(image, (1, 2, 0))
+            image = src.read()  # (C, H, W)
+            image = np.transpose(image, (1, 2, 0))  # (H, W, C)
             image = np.clip(image / 10000.0, 0, 1).astype(np.float32)
         
-        # Get CNN prediction
-        image_int = (image * 10000).astype(np.int16)
-        image_reshaped = np.transpose(image_int, (2, 0, 1))[np.newaxis, ...]
+        # Get CNN prediction - s2cloudless expects (N, H, W, C)
+        image_int = (image * 10000).astype(np.int16)  # (H, W, C)
+        image_reshaped = image_int[np.newaxis, ...]  # (N, H, W, C)
         cnn_prob = self.detector.get_cloud_probability_maps(image_reshaped)[0].astype(np.float32)
         
         # Load ground truth
