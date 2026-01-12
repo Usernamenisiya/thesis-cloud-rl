@@ -108,7 +108,7 @@ def train_ppo():
         "clip_range": 0.2,              # Standard clipping
         "clip_range_vf": None,          # No value clipping needed for 1-step
         "ent_coef": 0.01,               # Entropy for exploration
-        "vf_coef": 0.5,                 # Value coefficient
+        "vf_coef": 0.1,                 # Low value coefficient for 1-step episodes
         "max_grad_norm": 0.5,           # Gradient clipping
         "use_sde": False,               # State-dependent exploration
         "sde_sample_freq": -1,
