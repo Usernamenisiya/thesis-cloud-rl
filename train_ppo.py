@@ -95,14 +95,24 @@ def train_ppo():
     
     print(f"✅ Found {len(image_files)} CloudSEN12 patches")
     
-    # Load first patch for training (can extend to multiple patches later)
-    image = load_sentinel2_image(image_files[0])
+    # Split into train (80%) and test (20%) sets
+    split_idx = int(len(image_files) * 0.8)
+    train_image_files = image_files[:split_idx]
+    train_mask_files = mask_files[:split_idx]
+    test_image_files = image_files[split_idx:]
+    test_mask_files = mask_files[split_idx:]
+    
+    print(f"📊 Train: {len(train_image_files)} patches, Test: {len(test_image_files)} patches")
+    
+    # Use first training patch for RL training
+    # (Training on multiple full patches would require different environment design)
+    image = load_sentinel2_image(train_image_files[0])
     cnn_prob = get_cloud_mask(image)
     
-    with rasterio.open(mask_files[0]) as src:
+    with rasterio.open(train_mask_files[0]) as src:
         ground_truth = src.read(1)
     
-    print(f"✅ Data loaded: Image shape {image.shape}, CNN prob shape {cnn_prob.shape}")
+    print(f"✅ Training data loaded: Image shape {image.shape}, CNN prob shape {cnn_prob.shape}")
     print(f"📊 Cloud coverage: {(ground_truth > 0).mean()*100:.1f}% (Real Ground Truth)")
     
     # Create environment without reward normalization (rewards already scaled)
@@ -201,62 +211,77 @@ def train_ppo():
     
     # Evaluate on test data
     print("\n" + "=" * 60)
-    print("📊 Evaluating PPO Agent")
+    print("📊 Evaluating PPO Agent on Test Set")
     print("=" * 60)
     
-    eval_env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
-    rl_predictions = np.zeros_like(ground_truth, dtype=np.uint8)
+    # Evaluate on ALL test patches (not just training patch)
+    print(f"\n📊 Evaluating on {len(test_image_files)} test patches...")
     
-    print("\nGenerating predictions...")
-    print(f"🔍 Using trained model for evaluation (params hash: {hash(str(model.get_parameters()))})")
+    all_gt = []
+    all_cnn = []
+    all_ppo = []
     
-    # Evaluate all patches (each is a separate episode in episode-per-patch design)
-    num_patches = len(eval_env.all_positions)
-    
-    for patch_idx in range(num_patches):
-        obs, _ = eval_env.reset()  # Get next patch
+    for idx, (img_path, mask_path) in enumerate(zip(test_image_files, test_mask_files)):
+        print(f"  Processing test patch {idx+1}/{len(test_image_files)}", end='\r')
         
-        # Get current patch position
-        i, j = eval_env.current_pos
-        patch_size = eval_env.patch_size
+        # Load test patch
+        test_image = load_sentinel2_image(img_path)
+        test_cnn_prob = get_cloud_mask(test_image)
         
-        # Get action from model
-        action, _ = model.predict(obs, deterministic=True)
+        with rasterio.open(mask_path) as src:
+            test_gt = src.read(1)
         
-        # Store prediction for the current patch
-        rl_predictions[i:i+patch_size, j:j+patch_size] = action
+        # Create evaluation environment for this patch
+        eval_env = CloudMaskRefinementEnv(test_image, test_cnn_prob, test_gt, patch_size=64)
+        rl_predictions = np.zeros_like(test_gt, dtype=np.uint8)
         
-        # Step (episode ends immediately)
-        obs, reward, done, truncated, info = eval_env.step(action)
+        # Evaluate all patches (each is a separate episode)
+        num_patches = len(eval_env.all_positions)
         
-        if (patch_idx + 1) % 1000 == 0:
-            print(f"  Evaluated {patch_idx + 1}/{num_patches} patches")
+        for patch_idx in range(num_patches):
+            obs, _ = eval_env.reset()
+            i, j = eval_env.current_pos
+            patch_size = eval_env.patch_size
+            
+            action, _ = model.predict(obs, deterministic=True)
+            rl_predictions[i:i+patch_size, j:j+patch_size] = action
+            
+            obs, reward, done, truncated, info = eval_env.step(action)
+        
+        # Collect predictions
+        gt_binary = (test_gt > 0).astype(np.uint8)
+        cnn_binary = (test_cnn_prob > 0.5).astype(np.uint8)
+        rl_binary = (rl_predictions > 0).astype(np.uint8)
+        
+        all_gt.append(gt_binary.flatten())
+        all_cnn.append(cnn_binary.flatten())
+        all_ppo.append(rl_binary.flatten())
     
-    print(f"✅ Evaluation completed: {num_patches} patches")
+    print(f"\n✅ Evaluation completed on {len(test_image_files)} test patches")
     
-    # Calculate metrics
-    gt_binary = (ground_truth > 0).astype(np.uint8)
-    cnn_binary = (cnn_prob > 0.5).astype(np.uint8)
-    rl_binary = (rl_predictions > 0).astype(np.uint8)
+    # Combine all test patches
+    all_gt = np.concatenate(all_gt)
+    all_cnn = np.concatenate(all_cnn)
+    all_ppo = np.concatenate(all_ppo)
     
-    # CNN metrics
-    cnn_accuracy = accuracy_score(gt_binary.flatten(), cnn_binary.flatten())
-    cnn_precision = precision_score(gt_binary.flatten(), cnn_binary.flatten(), zero_division=0)
-    cnn_recall = recall_score(gt_binary.flatten(), cnn_binary.flatten(), zero_division=0)
-    cnn_f1 = f1_score(gt_binary.flatten(), cnn_binary.flatten(), zero_division=0)
+    # CNN metrics on test set
+    cnn_accuracy = accuracy_score(all_gt, all_cnn)
+    cnn_precision = precision_score(all_gt, all_cnn, zero_division=0)
+    cnn_recall = recall_score(all_gt, all_cnn, zero_division=0)
+    cnn_f1 = f1_score(all_gt, all_cnn, zero_division=0)
     
-    # PPO metrics
-    ppo_accuracy = accuracy_score(gt_binary.flatten(), rl_binary.flatten())
-    ppo_precision = precision_score(gt_binary.flatten(), rl_binary.flatten(), zero_division=0)
-    ppo_recall = recall_score(gt_binary.flatten(), rl_binary.flatten(), zero_division=0)
-    ppo_f1 = f1_score(gt_binary.flatten(), rl_binary.flatten(), zero_division=0)
+    # PPO metrics on test set
+    ppo_accuracy = accuracy_score(all_gt, all_ppo)
+    ppo_precision = precision_score(all_gt, all_ppo, zero_division=0)
+    ppo_recall = recall_score(all_gt, all_ppo, zero_division=0)
+    ppo_f1 = f1_score(all_gt, all_ppo, zero_division=0)
     
     # Calculate improvements
     f1_improvement = ((ppo_f1 - cnn_f1) / cnn_f1 * 100) if cnn_f1 > 0 else 0
     accuracy_improvement = ((ppo_accuracy - cnn_accuracy) / cnn_accuracy * 100) if cnn_accuracy > 0 else 0
     
     print("\n" + "=" * 60)
-    print("📈 Performance Comparison:")
+    print(f"📈 TEST SET PERFORMANCE ({len(test_image_files)} patches, {len(all_gt):,} pixels)")
     print("=" * 60)
     
     print("\n🧠 CNN Baseline:")
@@ -282,6 +307,9 @@ def train_ppo():
         "algorithm": "PPO",
         "training_time_seconds": training_time,
         "total_timesteps": total_timesteps,
+        "num_train_patches": len(train_image_files),
+        "num_test_patches": len(test_image_files),
+        "test_pixels": int(len(all_gt)),
         "cnn_baseline": {
             "accuracy": float(cnn_accuracy),
             "precision": float(cnn_precision),
