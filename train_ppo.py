@@ -90,12 +90,11 @@ def train_ppo():
     
     print(f"✅ Data loaded: Image shape {image.shape}, CNN prob shape {cnn_prob.shape}")
     
-    # Create environment with reward normalization
-    print("\n🎮 Creating RL environment with reward normalization...")
-    from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
+    # Create environment without reward normalization (rewards already scaled)
+    print("\n🎮 Creating RL environment...")
+    from stable_baselines3.common.vec_env import DummyVecEnv
     env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
     env = DummyVecEnv([lambda: env])
-    env = VecNormalize(env, norm_obs=False, norm_reward=True, clip_reward=1.0)
     
     # PPO configuration - Optimized for numerical stability
     print("🎯 Using NUMERICALLY STABLE configuration for optimal training")
