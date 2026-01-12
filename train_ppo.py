@@ -95,7 +95,7 @@ def train_ppo():
     from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
     env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
     env = DummyVecEnv([lambda: env])
-    env = VecNormalize(env, norm_obs=False, norm_reward=True, clip_reward=10.0)
+    env = VecNormalize(env, norm_obs=False, norm_reward=True, clip_reward=1.0)
     
     # PPO configuration - Optimized for numerical stability
     print("🎯 Using NUMERICALLY STABLE configuration for optimal training")
@@ -104,7 +104,7 @@ def train_ppo():
         "n_steps": 2048,                # Larger rollout for better value estimates
         "batch_size": 64,               # Mini-batch size
         "n_epochs": 10,                 # Number of epochs for SGD
-        "gamma": 0.99,                  # Discount factor
+        "gamma": 0.95,                  # Lower discount for shorter horizon
         "gae_lambda": 0.95,             # GAE lambda for advantage estimation
         "clip_range": 0.2,              # Standard clipping
         "clip_range_vf": 1.0,           # Tighter clip for value stability!
