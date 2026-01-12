@@ -57,13 +57,15 @@ def evaluate_rl_model(model_path="rl_cloud_refinement_model"):
     # Collect predictions from trained agent
     rl_predictions = np.zeros_like(ground_truth, dtype=np.float32)
 
-    obs, _ = eval_env.reset()  # Unpack tuple (obs, info)
-    done = False
-    step_count = 0
-
     print("🔄 Running RL evaluation...")
-    while not done:
-        # Get current patch position BEFORE taking action
+    
+    # Evaluate all patches (each is a separate episode)
+    num_patches = len(eval_env.all_positions)
+    
+    for patch_idx in range(num_patches):
+        obs, _ = eval_env.reset()  # Get next patch
+        
+        # Get current patch position
         i, j = eval_env.current_pos
         patch_size = eval_env.patch_size
         
@@ -73,14 +75,13 @@ def evaluate_rl_model(model_path="rl_cloud_refinement_model"):
         # Store prediction for the current patch
         rl_predictions[i:i+patch_size, j:j+patch_size] = action
 
-        # Step to next patch (returns 5 values for Gymnasium API)
+        # Step (episode ends immediately)
         obs, reward, done, truncated, info = eval_env.step(action)
-        step_count += 1
+        
+        if (patch_idx + 1) % 1000 == 0:
+            print(f"Evaluated {patch_idx + 1}/{num_patches} patches")
 
-        if step_count % 1000 == 0:
-            print(f"Step {step_count}: Position ({i}, {j})")
-
-    print(f"✅ Evaluation completed in {step_count} steps")
+    print(f"✅ Evaluation completed: {num_patches} patches")
 
     # Calculate RL metrics
     rl_binary = (rl_predictions > 0.5).astype(np.uint8)

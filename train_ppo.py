@@ -96,19 +96,19 @@ def train_ppo():
     env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
     env = DummyVecEnv([lambda: env])
     
-    # PPO configuration - Optimized for numerical stability
-    print("🎯 Using NUMERICALLY STABLE configuration for optimal training")
+    # PPO configuration - Optimized for 1-step episodes
+    print("🎯 Using EPISODE-PER-PATCH configuration for stable learning")
     ppo_config = {
-        "learning_rate": 3e-4,          # Moderate LR for stable learning
-        "n_steps": 2048,                # Larger rollout for better value estimates
-        "batch_size": 64,               # Mini-batch size
+        "learning_rate": 3e-4,          # Standard learning rate
+        "n_steps": 4096,                # More steps per update (many short episodes)
+        "batch_size": 256,              # Larger batch for stability
         "n_epochs": 10,                 # Number of epochs for SGD
-        "gamma": 0.95,                  # Lower discount for shorter horizon
+        "gamma": 0.99,                  # Can be high for 1-step episodes
         "gae_lambda": 0.95,             # GAE lambda for advantage estimation
         "clip_range": 0.2,              # Standard clipping
-        "clip_range_vf": 1.0,           # Tighter clip for value stability!
+        "clip_range_vf": None,          # No value clipping needed for 1-step
         "ent_coef": 0.01,               # Entropy for exploration
-        "vf_coef": 0.5,                 # Lower value coefficient for stability
+        "vf_coef": 0.5,                 # Value coefficient
         "max_grad_norm": 0.5,           # Gradient clipping
         "use_sde": False,               # State-dependent exploration
         "sde_sample_freq": -1,

@@ -5,11 +5,11 @@ from gymnasium import spaces
 class CloudMaskRefinementEnv(gym.Env):
     """
     Custom environment for refining cloud masks using RL.
-    AGGRESSIVE reward structure to force cloud detection.
+    Each patch is a separate 1-step episode for numerical stability.
     """
     def __init__(self, image, cnn_prob, ground_truth, patch_size=64):
         super().__init__()
-        print("🔧 Initializing CloudMaskRefinementEnv with NUMERICALLY STABLE REWARDS")  # Debug
+        print("🔧 Initializing CloudMaskRefinementEnv - Episode-per-Patch Design")
         self.image = image  # (H, W, bands)
         self.cnn_prob = cnn_prob  # (H, W)
         self.ground_truth = ground_truth  # (H, W) binary
@@ -23,17 +23,21 @@ class CloudMaskRefinementEnv(gym.Env):
         obs_shape = (image.shape[2] + 1, patch_size, patch_size)  # (C, H, W)
         self.observation_space = spaces.Box(low=0, high=1, shape=obs_shape, dtype=np.float32)
 
-        self.current_pos = (0, 0)
-        self.done = False
-        self.episode_clouds_detected = 0
-        self.episode_steps = 0
+        # Generate all patch positions
+        self.all_positions = []
+        for i in range(0, self.H - patch_size, patch_size):
+            for j in range(0, self.W - patch_size, patch_size):
+                self.all_positions.append((i, j))
+        
+        self.position_index = 0
+        self.current_pos = self.all_positions[0]
+        print(f"📊 Total patches: {len(self.all_positions)}")
 
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
-        self.current_pos = (0, 0)
-        self.done = False
-        self.episode_clouds_detected = 0
-        self.episode_steps = 0
+        # Get next patch position (cycle through all patches)
+        self.current_pos = self.all_positions[self.position_index]
+        self.position_index = (self.position_index + 1) % len(self.all_positions)
         return self._get_obs(), {}
 
     def _get_obs(self):
@@ -52,55 +56,36 @@ class CloudMaskRefinementEnv(gym.Env):
         total_pixels = patch_gt.size
         cloud_pixels = np.sum(patch_gt == 1)
 
-        # BALANCED REWARD STRUCTURE - Optimized scale for numerical stability
+        # Simplified reward for single-step episodes
         if cloud_pixels == 0:
-            # Pure clear sky patch - reward correct clear
-            if action == 0:
-                reward = 2.0  # Reward for correct clear
-            else:
-                reward = -3.0  # Penalty for false positive
+            # Pure clear sky patch
+            reward = 2.0 if action == 0 else -3.0
         elif cloud_pixels >= total_pixels * 0.3:
-            # Significant clouds present - reward detection, moderate penalty for misses
+            # Significant clouds present
             if action == 1:
-                reward = 2.5 + 1.5 * (cloud_pixels / total_pixels)  # Reward for correct detection
-                self.episode_clouds_detected += 1
+                reward = 2.5 + 1.5 * (cloud_pixels / total_pixels)
             else:
-                reward = -2.0 * (cloud_pixels / total_pixels)  # Moderate penalty for missing clouds
+                reward = -2.0 * (cloud_pixels / total_pixels)
         else:
             # Few clouds - balance precision and recall
             if action == 1:
-                reward = 1.0 * (cloud_pixels / total_pixels)  # Reward for partial clouds
-                self.episode_clouds_detected += 1
+                reward = 1.0 * (cloud_pixels / total_pixels)
             else:
-                reward = -1.0 * (cloud_pixels / total_pixels)  # Penalty for missing few clouds
+                reward = -1.0 * (cloud_pixels / total_pixels)
 
-        # Debug output (after reward calculation)
-        if self.episode_steps % 100 == 0:  # Only print every 100 steps to avoid spam
-            print(f"DEBUG: cloud_pixels={cloud_pixels}, action={action}, reward={reward:.3f}")
-
-        self.episode_steps += 1
-
-        # Move to next patch
-        j += self.patch_size
-        if j >= self.W - self.patch_size:
-            j = 0
-            i += self.patch_size
-            if i >= self.H - self.patch_size:
-                self.done = True
-
-        self.current_pos = (i, j)
-        obs = self._get_obs() if not self.done else np.zeros(self.observation_space.shape)
-
-        # Episode-end penalty if agent detected ZERO clouds
-        if self.done and self.episode_clouds_detected == 0:
-            reward -= 1.0
-
-        info = {'patch_position': (i, j)} if not self.done else {
-            'clouds_detected': self.episode_clouds_detected,
-            'episode_steps': self.episode_steps
+        # Episode ALWAYS ends after one step
+        done = True
+        
+        info = {
+            'patch_position': (i, j),
+            'cloud_pixels': cloud_pixels,
+            'action': action
         }
 
-        return obs, reward, self.done, False, info
+        # Next observation doesn't matter since episode is done
+        obs = np.zeros(self.observation_space.shape, dtype=np.float32)
+
+        return obs, reward, done, False, info
 
     def render(self):
         pass
