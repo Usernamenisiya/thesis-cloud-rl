@@ -80,15 +80,30 @@ def train_ppo():
     print("🤖 Training PPO Agent for Cloud Mask Refinement")
     print("=" * 60)
     
-    # Load data
-    print("\n📂 Loading data files...")
-    image = load_sentinel2_image('data/sentinel2_image.tif')
+    # Load CloudSEN12 processed data
+    print("\n📂 Loading CloudSEN12 data...")
+    import glob
+    
+    image_files = sorted(glob.glob('data/cloudsen12_processed/*_image.tif'))
+    mask_files = sorted(glob.glob('data/cloudsen12_processed/*_mask.tif'))
+    
+    if len(image_files) == 0:
+        raise FileNotFoundError(
+            "No processed CloudSEN12 data found. "
+            "Please run: python cloudsen12_loader.py"
+        )
+    
+    print(f"✅ Found {len(image_files)} CloudSEN12 patches")
+    
+    # Load first patch for training (can extend to multiple patches later)
+    image = load_sentinel2_image(image_files[0])
     cnn_prob = get_cloud_mask(image)
     
-    with rasterio.open('data/ground_truth.tif') as src:
+    with rasterio.open(mask_files[0]) as src:
         ground_truth = src.read(1)
     
     print(f"✅ Data loaded: Image shape {image.shape}, CNN prob shape {cnn_prob.shape}")
+    print(f"📊 Cloud coverage: {(ground_truth > 0).mean()*100:.1f}% (Real Ground Truth)")
     
     # Create environment without reward normalization (rewards already scaled)
     print("\n🎮 Creating RL environment...")
