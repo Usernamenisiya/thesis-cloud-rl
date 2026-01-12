@@ -55,23 +55,24 @@ class CloudMaskRefinementEnv(gym.Env):
 
         total_pixels = patch_gt.size
         cloud_pixels = np.sum(patch_gt == 1)
+        cloud_ratio = cloud_pixels / total_pixels
 
-        # Simplified reward for single-step episodes
+        # Reward structure optimized for low-coverage cloud detection
         if cloud_pixels == 0:
-            # Pure clear sky patch
-            reward = 2.0 if action == 0 else -3.0
-        elif cloud_pixels >= total_pixels * 0.3:
-            # Significant clouds present
+            # Pure clear sky (rare in this dataset)
+            reward = 3.0 if action == 0 else -5.0
+        elif cloud_ratio < 0.05:
+            # Very few clouds (< 5%) - still important to detect
             if action == 1:
-                reward = 2.5 + 1.5 * (cloud_pixels / total_pixels)
+                reward = 2.0 + 3.0 * cloud_ratio  # Base reward + bonus
             else:
-                reward = -2.0 * (cloud_pixels / total_pixels)
+                reward = -4.0  # Fixed penalty for missing any clouds
         else:
-            # Few clouds - balance precision and recall
+            # Any significant clouds (5%+) - prioritize detection
             if action == 1:
-                reward = 1.0 * (cloud_pixels / total_pixels)
+                reward = 3.0 + 2.0 * cloud_ratio  # Good reward for detection
             else:
-                reward = -1.0 * (cloud_pixels / total_pixels)
+                reward = -6.0 * cloud_ratio  # Heavy penalty for missing clouds
 
         # Episode ALWAYS ends after one step
         done = True
