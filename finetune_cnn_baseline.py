@@ -174,8 +174,8 @@ def finetune_cnn():
     image_files = sorted(glob.glob('data/cloudsen12_processed/*_image.tif'))
     mask_files = sorted(glob.glob('data/cloudsen12_processed/*_mask.tif'))
     
-    if len(image_files) < 2:
-        raise ValueError("Need at least 2 patches for train/val split")
+    if len(image_files) < 10:
+        raise ValueError(f"Need at least 10 patches for train/val split, found {len(image_files)}")
     
     print(f"\n📂 Found {len(image_files)} patches")
     
@@ -187,6 +187,7 @@ def finetune_cnn():
     val_masks = mask_files[split_idx:]
     
     print(f"📊 Train: {len(train_images)} patches, Val: {len(val_images)} patches")
+    print(f"📊 Total pixels: {len(train_images) * 512 * 512:,} training, {len(val_images) * 512 * 512:,} validation")
     
     # Create datasets
     train_dataset = CloudSEN12Dataset(train_images, train_masks)
@@ -197,7 +198,8 @@ def finetune_cnn():
     
     # Train
     print("\n🚀 Starting fine-tuning...")
-    model = train_finetuned_model(train_loader, val_loader, epochs=20, lr=0.001)
+    print("⚙️  With 100 patches and GPU, this should take ~15-20 minutes")
+    model = train_finetuned_model(train_loader, val_loader, epochs=30, lr=0.001)
     
     # Save model
     torch.save(model.state_dict(), 'models/finetuned_s2cloudless.pth')
