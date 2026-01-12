@@ -90,23 +90,26 @@ def train_ppo():
     
     print(f"✅ Data loaded: Image shape {image.shape}, CNN prob shape {cnn_prob.shape}")
     
-    # Create environment
-    print("\n🎮 Creating RL environment...")
+    # Create environment with reward normalization
+    print("\n🎮 Creating RL environment with reward normalization...")
+    from stable_baselines3.common.vec_env import VecNormalize, DummyVecEnv
     env = CloudMaskRefinementEnv(image, cnn_prob, ground_truth, patch_size=64)
+    env = DummyVecEnv([lambda: env])
+    env = VecNormalize(env, norm_obs=False, norm_reward=True, clip_reward=10.0)
     
-    # PPO configuration - BALANCED for optimal F1-Score with stable value learning
-    print("🎯 Using BALANCED reward configuration for optimal F1-Score")
+    # PPO configuration - Optimized for numerical stability
+    print("🎯 Using NUMERICALLY STABLE configuration for optimal training")
     ppo_config = {
-        "learning_rate": 5e-4,          # Higher LR for faster learning
-        "n_steps": 1024,                # Smaller rollout for more frequent updates
+        "learning_rate": 3e-4,          # Moderate LR for stable learning
+        "n_steps": 2048,                # Larger rollout for better value estimates
         "batch_size": 64,               # Mini-batch size
         "n_epochs": 10,                 # Number of epochs for SGD
         "gamma": 0.99,                  # Discount factor
         "gae_lambda": 0.95,             # GAE lambda for advantage estimation
         "clip_range": 0.2,              # Standard clipping
-        "clip_range_vf": 10.0,          # Clip value function for stability!
-        "ent_coef": 0.02,               # Moderate entropy for exploration
-        "vf_coef": 1.0,                 # HIGHER value function coefficient for better learning
+        "clip_range_vf": 1.0,           # Tighter clip for value stability!
+        "ent_coef": 0.01,               # Entropy for exploration
+        "vf_coef": 0.5,                 # Lower value coefficient for stability
         "max_grad_norm": 0.5,           # Gradient clipping
         "use_sde": False,               # State-dependent exploration
         "sde_sample_freq": -1,
