@@ -134,8 +134,8 @@ def main():
     # Load CloudSEN12 data
     print("\n📂 Loading CloudSEN12 data...")
     data_dir = "data/cloudsen12_processed"
-    image_files = sorted(glob.glob(os.path.join(data_dir, "image_*.tif")))
-    mask_files = sorted(glob.glob(os.path.join(data_dir, "mask_*.tif")))
+    image_files = sorted(glob.glob(os.path.join(data_dir, "*_image.tif")))
+    mask_files = sorted(glob.glob(os.path.join(data_dir, "*_mask.tif")))
     
     if len(image_files) == 0:
         raise ValueError(f"No processed CloudSEN12 data found in {data_dir}")
