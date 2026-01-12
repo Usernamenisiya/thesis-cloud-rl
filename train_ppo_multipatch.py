@@ -107,8 +107,12 @@ class MultiPatchEnv(gym.Env):
         self.current_gt = ground_truth
         self.current_patch_idx = idx
     
-    def reset(self):
+    def reset(self, seed=None, options=None):
         """Reset: randomly sample a new patch or continue with current"""
+        # Handle seed if provided
+        if seed is not None:
+            np.random.seed(seed)
+        
         # 20% chance to switch to a different patch
         if np.random.random() < 0.2:
             new_idx = np.random.randint(0, len(self.image_paths))
