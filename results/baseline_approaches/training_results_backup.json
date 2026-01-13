@@ -1,0 +1,33 @@
+{
+  "cnn_baseline": {
+    "accuracy": 0.4187445960696879,
+    "precision": 0.1706429362163237,
+    "recall": 0.6231690089783268,
+    "f1_score": 0.2679208598328734
+  },
+  "rl_refined": {
+    "accuracy": 0.8254724105095869,
+    "precision": 0.17068836300872092,
+    "recall": 0.005843969910640504,
+    "f1_score": 0.011301019377284248
+  },
+  "improvement": {
+    "f1_improvement_percent": -95.78195614020734
+  },
+  "training_config": {
+    "total_timesteps": 50000,
+    "learning_rate": 0.0001,
+    "batch_size": 64,
+    "buffer_size": 100000,
+    "learning_starts": 1000,
+    "target_update_interval": 1000,
+    "train_freq": [
+      4,
+      "step"
+    ],
+    "gradient_steps": 1,
+    "exploration_fraction": 0.1,
+    "exploration_final_eps": 0.01
+  },
+  "timestamp": "2026-01-11 04:51:15"
+}
