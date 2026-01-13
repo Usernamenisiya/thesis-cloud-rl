@@ -27,15 +27,25 @@ class ThresholdRefinementEnv(gym.Env):
     def __init__(self, image, cnn_prob, ground_truth, patch_size=64, baseline_threshold=0.5):
         super().__init__()
         
-        self.image = image  # (10, H, W)
+        # Handle both (H, W, 10) and (10, H, W) formats
+        if image.ndim == 3:
+            if image.shape[2] == 10:
+                # Input is (H, W, 10), transpose to (10, H, W)
+                self.image = np.transpose(image, (2, 0, 1))
+            else:
+                # Already (10, H, W)
+                self.image = image
+        else:
+            raise ValueError(f"Expected 3D image, got shape {image.shape}")
+        
         self.cnn_prob = cnn_prob  # (H, W)
         self.ground_truth = ground_truth  # (H, W)
         self.patch_size = patch_size
         self.baseline_threshold = baseline_threshold
         
         # Validate shapes
-        assert self.image.shape[1] == self.cnn_prob.shape[0], "Image and CNN prob height mismatch"
-        assert self.image.shape[2] == self.cnn_prob.shape[1], "Image and CNN prob width mismatch"
+        assert self.image.shape[1] == self.cnn_prob.shape[0], f"Image and CNN prob height mismatch: {self.image.shape[1]} vs {self.cnn_prob.shape[0]}"
+        assert self.image.shape[2] == self.cnn_prob.shape[1], f"Image and CNN prob width mismatch: {self.image.shape[2]} vs {self.cnn_prob.shape[1]}"
         
         # Extract all possible patch positions
         self.height, self.width = self.cnn_prob.shape
