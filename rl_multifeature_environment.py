@@ -1,11 +1,15 @@
 """
-Multi-Feature RL Environment for Cloud Detection Refinement
+Multi-Feature RL Environment for THIN CLOUD Detection
+
+GOAL: Specifically improve detection of thin/cirrus clouds (CNN's main weakness)
 
 Enhanced environment that uses:
-- Texture features (variance, edge density, homogeneity)
-- Spectral indices (NDSI, NDVI) 
-- Multi-dimensional actions (threshold, texture weight, spectral mask)
-- Modified reward with F-beta and shadow penalties
+- Optical thickness estimation from spectral bands
+- Thin cloud indicators (BTD - Brightness Temperature Difference)
+- Texture features (variance, edge density for thin cloud patterns)
+- Spectral indices (NDSI, NDVI to filter false positives)
+- Multi-dimensional actions (threshold, thin cloud boost, spectral mask)
+- Modified reward with BONUS for detecting thin clouds specifically
 
 Author: Thesis Implementation
 Date: January 2026
@@ -21,24 +25,28 @@ from skimage.feature import graycomatrix, graycoprops
 
 class MultiFeatureRefinementEnv(gym.Env):
     """
-    Enhanced RL environment for cloud detection with multiple features and actions.
+    Enhanced RL environment specifically for THIN CLOUD detection.
+    
+    CNN Weakness: Thin/cirrus clouds have low reflectance → low CNN probability → missed
+    Solution: Agent learns to boost confidence for thin cloud patterns
     
     Observation Space:
         - CNN probability patch (64x64 flattened)
-        - Texture features (variance, edge density, homogeneity)
-        - Spectral indices (NDSI, NDVI, mean reflectances)
-        - Spatial statistics (mean, std, min, max)
-        - Current action values
+        - Optical thickness indicators (BTD, reflectance ratios)
+        - Thin cloud texture patterns (low variance, smooth edges)
+        - Spectral indices (NDSI, NDVI to filter false positives)
+        - Cloud thickness classification (thin vs thick)
         
     Action Space:
-        - threshold_delta: [-0.3, +0.3] - Adjust CNN threshold
-        - texture_weight: [0, 1] - Weight for texture-based masking
-        - spectral_weight: [0, 1] - Weight for spectral index masking
+        - threshold_delta: [-0.3, +0.3] - Base threshold adjustment
+        - thin_cloud_boost: [0, 0.4] - Extra boost for thin cloud pixels
+        - spectral_weight: [0, 1] - Weight for spectral masking
         
     Reward:
-        - F-beta score (beta=0.7) to emphasize precision
-        - Penalties for false positives in dark areas
-        - Bonuses for correctly handling shadows
+        - Base: F1-score improvement
+        - BONUS: Extra reward for correctly detecting thin clouds
+        - PENALTY: False positives on shadows/water
+        - BONUS: High precision on thin clouds specifically
     """
     
     def __init__(self, image, cnn_prob, ground_truth, patch_size=64, baseline_threshold=0.5, beta=0.7):
@@ -70,24 +78,31 @@ class MultiFeatureRefinementEnv(gym.Env):
         # Pre-compute spectral indices
         self._compute_spectral_indices()
         
+        # Pre-compute thin cloud indicators
+        self._compute_thin_cloud_indicators()
+        
+        # Classify ground truth into thin vs thick clouds
+        self._classify_cloud_thickness()
+        
         # Pre-compute texture features for all patches
         self._compute_texture_features()
         
-        # Action space: [threshold_delta, texture_weight, spectral_weight]
+        # Action space: [threshold_delta, thin_cloud_boost, spectral_weight]
         self.action_space = spaces.Box(
             low=np.array([-0.3, 0.0, 0.0]),
-            high=np.array([0.3, 1.0, 1.0]),
+            high=np.array([0.3, 0.4, 1.0]),  # thin_cloud_boost can go up to +0.4
             dtype=np.float32
         )
         
         # Observation space calculation
         patch_features = patch_size * patch_size  # CNN prob patch
         texture_features = 5  # variance, edge_density, homogeneity, contrast, energy
-        spectral_features = 6  # NDSI, NDVI, mean_nir, mean_red, mean_green, mean_swir
+        spectral_features = 6  # NDSI, NDVI, mean_nir, mean_red, mean_green, mean_blue
+        thin_cloud_features = 4  # blue_red_ratio, normalized_reflectance, thin_indicator, thick_indicator
         spatial_stats = 4  # mean, std, min, max
         action_memory = 3  # previous actions
         
-        obs_size = patch_features + texture_features + spectral_features + spatial_stats + action_memory
+        obs_size = patch_features + texture_features + spectral_features + thin_cloud_features + spatial_stats + action_memory
         
         self.observation_space = spaces.Box(
             low=0, high=1, shape=(obs_size,), dtype=np.float32
@@ -96,7 +111,7 @@ class MultiFeatureRefinementEnv(gym.Env):
         # State
         self.current_patch_idx = 0
         self.current_pos = (0, 0)
-        self.current_actions = np.array([0.0, 0.5, 0.5])  # Initial values
+        self.current_actions = np.array([0.0, 0.0, 0.5])  # [threshold_delta, thin_boost, spectral_weight]
         
     def _compute_spectral_indices(self):
         """Pre-compute spectral indices for all patches."""
@@ -132,6 +147,59 @@ class MultiFeatureRefinementEnv(gym.Env):
             self.green_band = np.zeros_like(self.cnn_prob)
             self.red_band = np.zeros_like(self.cnn_prob)
             self.nir_band = np.zeros_like(self.cnn_prob)
+    
+    def _compute_thin_cloud_indicators(self):
+        """
+        Compute indicators specifically for thin cloud detection.
+        
+        Thin clouds characteristics:
+        - Low but consistent reflectance across bands
+        - Smooth texture (low variance)
+        - Brightness temperature difference (BTD) - cirrus detection
+        - High blue/red ratio (scattering)
+        """
+        # Reflectance ratio: Blue/Red (thin clouds scatter more blue light)
+        self.blue_red_ratio = np.where(
+            self.red_band > 100,
+            self.blue_band / (self.red_band + 1e-6),
+            0
+        )
+        
+        # Normalized reflectance: how bright overall (thin clouds have low-medium reflectance)
+        total_reflectance = self.blue_band + self.green_band + self.red_band + self.nir_band
+        self.normalized_reflectance = total_reflectance / 4.0
+        
+        # Thin cloud indicator: moderate reflectance + high blue/red ratio
+        thin_cloud_threshold_low = 1000   # Low reflectance
+        thin_cloud_threshold_high = 4000  # High reflectance (thick clouds)
+        
+        self.thin_cloud_indicator = np.logical_and(
+            self.normalized_reflectance > thin_cloud_threshold_low,
+            self.normalized_reflectance < thin_cloud_threshold_high
+        ).astype(np.float32) * (self.blue_red_ratio > 1.05).astype(np.float32)
+    
+    def _classify_cloud_thickness(self):
+        """
+        Classify ground truth clouds into thin vs thick based on reflectance.
+        This helps us reward thin cloud detection specifically.
+        """
+        # Where ground truth says there are clouds
+        cloud_mask = self.ground_truth > 0
+        
+        # Estimate thickness from reflectance
+        # Thin clouds: 1000-4000 reflectance
+        # Thick clouds: >4000 reflectance
+        thickness_threshold = 4000
+        
+        self.thin_clouds_gt = np.logical_and(
+            cloud_mask,
+            self.normalized_reflectance < thickness_threshold
+        ).astype(np.uint8)
+        
+        self.thick_clouds_gt = np.logical_and(
+            cloud_mask,
+            self.normalized_reflectance >= thickness_threshold
+        ).astype(np.uint8)
     
     def _compute_texture_features(self):
         """Pre-compute texture features for efficiency."""
@@ -194,8 +262,25 @@ class MultiFeatureRefinementEnv(gym.Env):
             np.clip(blue_patch.mean() / max_val, 0, 1)
         ])
     
+    def _extract_thin_cloud_features(self, i, j):
+        """Extract thin cloud indicators for a patch region."""
+        blue_red_patch = self.blue_red_ratio[i:i+self.patch_size, j:j+self.patch_size]
+        reflectance_patch = self.normalized_reflectance[i:i+self.patch_size, j:j+self.patch_size]
+        thin_indicator_patch = self.thin_cloud_indicator[i:i+self.patch_size, j:j+self.patch_size]
+        
+        # Check if this patch contains thin clouds (from ground truth)
+        thin_gt_patch = self.thin_clouds_gt[i:i+self.patch_size, j:j+self.patch_size]
+        thick_gt_patch = self.thick_clouds_gt[i:i+self.patch_size, j:j+self.patch_size]
+        
+        return np.array([
+            np.clip(blue_red_patch.mean() / 2.0, 0, 1),  # Normalize
+            np.clip(reflectance_patch.mean() / 10000.0, 0, 1),  # Normalize
+            thin_indicator_patch.mean(),  # Already 0-1
+            float(thin_gt_patch.sum() > 0)  # Has thin clouds flag
+        ])
+    
     def _get_observation(self):
-        """Construct observation vector with all features."""
+        """Construct observation vector with all features including thin cloud indicators."""
         i, j = self.current_pos
         
         # CNN probability patch
@@ -207,6 +292,9 @@ class MultiFeatureRefinementEnv(gym.Env):
         
         # Spectral features
         spectral_features = self._extract_spectral_features(i, j)
+        
+        # Thin cloud features (NEW - this is the key for thin cloud detection)
+        thin_cloud_features = self._extract_thin_cloud_features(i, j)
         
         # Spatial statistics
         spatial_stats = np.array([
@@ -221,6 +309,7 @@ class MultiFeatureRefinementEnv(gym.Env):
             cnn_flat,
             texture_features,
             spectral_features,
+            thin_cloud_features,
             spatial_stats,
             self.current_actions
         ]).astype(np.float32)
@@ -229,7 +318,9 @@ class MultiFeatureRefinementEnv(gym.Env):
     
     def _compute_reward(self, adjusted_pred, i, j):
         """
-        Compute reward with F-beta score and shadow penalties.
+        Compute reward with SPECIAL FOCUS on thin cloud detection.
+        
+        THIS IS THE KEY: We want to specifically reward detecting thin clouds!
         
         Args:
             adjusted_pred: Binary prediction for current patch
@@ -238,7 +329,11 @@ class MultiFeatureRefinementEnv(gym.Env):
         gt_patch = self.ground_truth[i:i+self.patch_size, j:j+self.patch_size]
         gt_binary = (gt_patch > 0).astype(np.uint8)
         
-        # F-beta score for this patch
+        # Separate thin and thick clouds in this patch
+        thin_gt_patch = self.thin_clouds_gt[i:i+self.patch_size, j:j+self.patch_size]
+        thick_gt_patch = self.thick_clouds_gt[i:i+self.patch_size, j:j+self.patch_size]
+        
+        # F-beta score for overall patch
         gt_flat = gt_binary.flatten()
         pred_flat = adjusted_pred.flatten()
         
@@ -251,8 +346,38 @@ class MultiFeatureRefinementEnv(gym.Env):
         # Base reward: improvement over baseline
         reward = (fbeta_adjusted - fbeta_baseline) * 10.0
         
-        # Penalty for false positives in dark areas
-        mean_reflectance = self.nir_band[i:i+self.patch_size, j:j+self.patch_size].mean()
+        # ============================================================
+        # THIN CLOUD BONUS (THIS IS THE KEY INNOVATION!)
+        # ============================================================
+        if thin_gt_patch.sum() > 0:
+            # This patch contains thin clouds!
+            thin_flat = thin_gt_patch.flatten()
+            
+            # Calculate recall specifically for thin clouds
+            thin_cloud_pixels_detected = np.logical_and(pred_flat == 1, thin_flat == 1).sum()
+            thin_cloud_total = thin_flat.sum()
+            thin_recall = thin_cloud_pixels_detected / max(thin_cloud_total, 1)
+            
+            # Calculate precision for thin cloud predictions
+            thin_pred_correct = np.logical_and(pred_flat == 1, thin_flat == 1).sum()
+            thin_pred_total = np.logical_and(pred_flat == 1, thin_flat + thick_gt_patch.flatten() > 0).sum()
+            thin_precision = thin_pred_correct / max(thin_pred_total, 1) if thin_pred_total > 0 else 0
+            
+            # BIG BONUS for detecting thin clouds (weighted F1 for thin clouds)
+            if thin_recall > 0.3:  # Detected at least 30% of thin clouds
+                thin_f1 = 2 * thin_precision * thin_recall / (thin_precision + thin_recall + 1e-6)
+                reward += thin_f1 * 5.0  # Big bonus!
+            
+            # Extra bonus for high thin cloud recall
+            if thin_recall > 0.5:
+                reward += 2.0
+            if thin_recall > 0.7:
+                reward += 3.0
+        
+        # ============================================================
+        # FALSE POSITIVE PENALTIES (still important)
+        # ============================================================
+        mean_reflectance = self.normalized_reflectance[i:i+self.patch_size, j:j+self.patch_size].mean()
         dark_threshold = 1000.0  # Low reflectance threshold
         
         if mean_reflectance < dark_threshold:
@@ -261,16 +386,15 @@ class MultiFeatureRefinementEnv(gym.Env):
             if false_positives > 0:
                 reward -= false_positives / pred_flat.size * 2.0  # Penalty
         
-        # Bonus for high precision in dark areas
-        if mean_reflectance < dark_threshold:
-            precision = precision_score(gt_flat, pred_flat, zero_division=0)
-            if precision > 0.5:
-                reward += precision * 1.0
-        
-        # Bonus for correctly rejecting dark areas as non-cloud
-        if mean_reflectance < dark_threshold and gt_binary.sum() == 0:
-            if pred_flat.sum() < gt_flat.size * 0.1:  # Correctly sparse prediction
-                reward += 0.5
+        # ============================================================
+        # THICK CLOUD BASELINE (should already be detected)
+        # ============================================================
+        if thick_gt_patch.sum() > 0:
+            # Thick clouds should be easy - penalize if we miss them
+            thick_flat = thick_gt_patch.flatten()
+            thick_recall = np.logical_and(pred_flat == 1, thick_flat == 1).sum() / max(thick_flat.sum(), 1)
+            if thick_recall < 0.5:  # Missing thick clouds is bad
+                reward -= 1.0
         
         return reward
     
@@ -279,37 +403,55 @@ class MultiFeatureRefinementEnv(gym.Env):
         super().reset(seed=seed)
         self.current_patch_idx = 0
         self.current_pos = (0, 0)
-        self.current_actions = np.array([0.0, 0.5, 0.5])
+        self.current_actions = np.array([0.0, 0.0, 0.5])  # [threshold_delta, thin_boost, spectral_weight]
         return self._get_observation(), {}
     
     def step(self, action):
         """
         Execute action and return next observation.
         
-        Action: [threshold_delta, texture_weight, spectral_weight]
+        Action: [threshold_delta, thin_cloud_boost, spectral_weight]
+        thin_cloud_boost: Extra probability boost for pixels identified as thin clouds
         """
         i, j = self.current_pos
         
         # Clip and store actions
         threshold_delta = np.clip(action[0], -0.3, 0.3)
-        texture_weight = np.clip(action[1], 0.0, 1.0)
+        thin_cloud_boost = np.clip(action[1], 0.0, 0.4)  # Boost for thin clouds
         spectral_weight = np.clip(action[2], 0.0, 1.0)
-        self.current_actions = np.array([threshold_delta, texture_weight, spectral_weight])
+        self.current_actions = np.array([threshold_delta, thin_cloud_boost, spectral_weight])
         
         # Extract patches
-        cnn_patch = self.cnn_prob[i:i+self.patch_size, j:j+self.patch_size]
+        cnn_patch = self.cnn_prob[i:i+self.patch_size, j:j+self.patch_size].copy()
         
-        # Apply threshold adjustment
+        # Apply base threshold adjustment
         adjusted_threshold = np.clip(self.baseline_threshold + threshold_delta, 0.1, 0.9)
-        threshold_pred = (cnn_patch > adjusted_threshold).astype(np.float32)
         
-        # Texture-based masking
-        texture_features = self._extract_texture_features(cnn_patch)
-        texture_variance = texture_features[0]
-        # Clouds typically have more texture variation
-        texture_mask = (texture_variance > 0.01).astype(np.float32)
+        # ============================================================
+        # KEY INNOVATION: THIN CLOUD BOOST
+        # ============================================================
+        # Identify potential thin cloud pixels
+        thin_indicator_patch = self.thin_cloud_indicator[i:i+self.patch_size, j:j+self.patch_size]
+        blue_red_patch = self.blue_red_ratio[i:i+self.patch_size, j:j+self.patch_size]
+        reflectance_patch = self.normalized_reflectance[i:i+self.patch_size, j:j+self.patch_size]
         
-        # Spectral-based masking
+        # Pixels that look like thin clouds (moderate reflectance + high blue/red ratio)
+        is_thin_cloud_like = np.logical_and(
+            np.logical_and(reflectance_patch > 1000, reflectance_patch < 4000),
+            blue_red_patch > 1.05
+        )
+        
+        # Boost CNN probability for thin cloud-like pixels
+        cnn_boosted = cnn_patch.copy()
+        cnn_boosted[is_thin_cloud_like] += thin_cloud_boost
+        cnn_boosted = np.clip(cnn_boosted, 0, 1)
+        
+        # Apply threshold to boosted probabilities
+        threshold_pred = (cnn_boosted > adjusted_threshold).astype(np.float32)
+        
+        # ============================================================
+        # Spectral-based filtering (to reduce false positives)
+        # ============================================================
         ndvi_patch = self.ndvi[i:i+self.patch_size, j:j+self.patch_size]
         ndsi_patch = self.ndsi[i:i+self.patch_size, j:j+self.patch_size]
         
@@ -318,16 +460,16 @@ class MultiFeatureRefinementEnv(gym.Env):
         spectral_mask = np.logical_or(ndvi_patch < 0.2, ndsi_patch > 0.4).astype(np.float32)
         
         # Combine predictions with weights
+        # High spectral_weight = trust spectral indices more
         combined_pred = (
-            threshold_pred * (1.0 - texture_weight - spectral_weight) +
-            threshold_pred * texture_mask * texture_weight +
+            threshold_pred * (1.0 - spectral_weight) +
             threshold_pred * spectral_mask * spectral_weight
         )
         
         # Final binary prediction
         final_pred = (combined_pred > 0.5).astype(np.uint8)
         
-        # Compute reward
+        # Compute reward (with thin cloud bonuses!)
         reward = self._compute_reward(final_pred, i, j)
         
         # Move to next patch

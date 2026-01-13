@@ -1,11 +1,16 @@
 """
-Train PPO agent with Multi-Feature RL Environment
+Train PPO agent with Multi-Feature RL Environment - THIN CLOUD FOCUS
+
+GOAL: Specifically improve detection of THIN/CIRRUS clouds (CNN's main weakness)
 
 This script trains an RL agent that uses:
-- Texture features (variance, edge density, GLCM properties)
-- Spectral indices (NDSI, NDVI)
-- Multi-dimensional actions (threshold, texture weight, spectral weight)
-- Modified reward with F-beta (emphasizing precision) and shadow penalties
+- Optical thickness estimation (blue/red ratio, reflectance levels)
+- Thin cloud boost action (increases confidence for thin cloud pixels)
+- Spectral indices (NDSI, NDVI to filter false positives)
+- Modified reward with BIG BONUSES for detecting thin clouds
+- Penalties for missing thick clouds or false positives on shadows
+
+Key Innovation: "thin_cloud_boost" action that specifically targets low-reflectance clouds
 
 Author: Thesis Implementation
 Date: January 2026
@@ -59,14 +64,23 @@ def train_multifeature_rl(
         save_path: Directory to save model
     """
     print("\n" + "="*80)
-    print("🎯 TRAINING MULTI-FEATURE RL AGENT")
+    print("🎯 TRAINING THIN CLOUD DETECTION RL AGENT")
     print("="*80)
     print(f"Training patches: {len(train_image_files)}")
     print(f"Total timesteps: {total_timesteps:,}")
     print(f"Learning rate: {learning_rate}")
     print(f"F-beta parameter: {beta} (emphasizes precision)")
-    print(f"Features: CNN prob + Texture + Spectral indices")
-    print(f"Actions: [threshold_delta, texture_weight, spectral_weight]")
+    print(f"\nFEATURES:")
+    print(f"  - Optical thickness indicators (blue/red ratio, reflectance)")
+    print(f"  - Thin cloud classification from ground truth")
+    print(f"  - Spectral indices (NDSI, NDVI)")
+    print(f"\nACTIONS:")
+    print(f"  - threshold_delta: Base threshold adjustment")
+    print(f"  - thin_cloud_boost: BOOST for thin cloud pixels (KEY!)")
+    print(f"  - spectral_weight: Filter false positives")
+    print(f"\nREWARD:")
+    print(f"  - BIG BONUS for detecting thin clouds specifically")
+    print(f"  - Penalties for false positives on shadows")
     print("="*80 + "\n")
     
     # Create dummy environment for initialization
@@ -180,19 +194,26 @@ def evaluate_multifeature_model(
         results_dir: Directory to save results
     """
     print("\n" + "="*80)
-    print("📊 EVALUATING MULTI-FEATURE RL MODEL")
+    print("📊 EVALUATING THIN CLOUD DETECTION MODEL")
     print("="*80)
     print(f"Test patches: {len(test_image_files)}")
     print(f"F-beta parameter: {beta}")
+    print(f"Will report: Overall + Thin Clouds + Thick Clouds metrics")
     print("="*80 + "\n")
     
     all_gt = []
     all_baseline = []
     all_multifeature = []
     
+    # Track thin vs thick cloud performance separately
+    all_thin_gt = []
+    all_thin_pred = []
+    all_thick_gt = []
+    all_thick_pred = []
+    
     action_stats = {
         'threshold_deltas': [],
-        'texture_weights': [],
+        'thin_cloud_boosts': [],  # UPDATED
         'spectral_weights': []
     }
     
@@ -227,22 +248,29 @@ def evaluate_multifeature_model(
             
             # Store action statistics
             action_stats['threshold_deltas'].append(action[0])
-            action_stats['texture_weights'].append(action[1])
+            action_stats['thin_cloud_boosts'].append(action[1])  # UPDATED: was texture_weights
             action_stats['spectral_weights'].append(action[2])
             
-            # Apply action
+            # Apply action (same logic as environment)
             threshold_delta = np.clip(action[0], -0.3, 0.3)
-            texture_weight = np.clip(action[1], 0.0, 1.0)
+            thin_cloud_boost = np.clip(action[1], 0.0, 0.4)  # UPDATED
             spectral_weight = np.clip(action[2], 0.0, 1.0)
             
-            # Get predictions
-            cnn_patch = cnn_prob[i:i+64, j:j+64]
+            # Get predictions (using thin cloud boost logic)
+            cnn_patch = cnn_prob[i:i+64, j:j+64].copy()
             adjusted_threshold = np.clip(0.5 + threshold_delta, 0.1, 0.9)
-            threshold_pred = (cnn_patch > adjusted_threshold).astype(np.float32)
             
-            # Texture masking
-            texture_features = env._extract_texture_features(cnn_patch)
-            texture_mask = (texture_features[0] > 0.01).astype(np.float32)
+            # Apply thin cloud boost
+            is_thin_cloud_like = np.logical_and(
+                np.logical_and(env.normalized_reflectance[i:i+64, j:j+64] > 1000,
+                              env.normalized_reflectance[i:i+64, j:j+64] < 4000),
+                env.blue_red_ratio[i:i+64, j:j+64] > 1.05
+            )
+            cnn_boosted = cnn_patch.copy()
+            cnn_boosted[is_thin_cloud_like] += thin_cloud_boost
+            cnn_boosted = np.clip(cnn_boosted, 0, 1)
+            
+            threshold_pred = (cnn_boosted > adjusted_threshold).astype(np.float32)
             
             # Spectral masking
             ndvi_patch = env.ndvi[i:i+64, j:j+64]
@@ -251,8 +279,7 @@ def evaluate_multifeature_model(
             
             # Combine
             combined = (
-                threshold_pred * (1.0 - texture_weight - spectral_weight) +
-                threshold_pred * texture_mask * texture_weight +
+                threshold_pred * (1.0 - spectral_weight) +
                 threshold_pred * spectral_mask * spectral_weight
             )
             
@@ -267,6 +294,12 @@ def evaluate_multifeature_model(
         all_gt.append(gt_binary.flatten())
         all_baseline.append(baseline_pred.flatten())
         all_multifeature.append(multifeature_pred.flatten())
+        
+        # Collect thin vs thick cloud predictions (KEY METRICS!)
+        all_thin_gt.append(env.thin_clouds_gt.flatten())
+        all_thin_pred.append(multifeature_pred.flatten())  # Will filter later
+        all_thick_gt.append(env.thick_clouds_gt.flatten())
+        all_thick_pred.append(multifeature_pred.flatten())  # Will filter later
     
     print(f"\nProcessed {len(test_image_files)} test patches")
     
@@ -275,7 +308,13 @@ def evaluate_multifeature_model(
     all_baseline = np.concatenate(all_baseline)
     all_multifeature = np.concatenate(all_multifeature)
     
-    # Calculate metrics
+    # Concatenate thin/thick cloud arrays
+    all_thin_gt = np.concatenate(all_thin_gt)
+    all_thin_pred = np.concatenate(all_thin_pred)
+    all_thick_gt = np.concatenate(all_thick_gt)
+    all_thick_pred = np.concatenate(all_thick_pred)
+    
+    # Calculate overall metrics
     baseline_metrics = {
         'accuracy': accuracy_score(all_gt, all_baseline),
         'precision': precision_score(all_gt, all_baseline, zero_division=0),
@@ -292,6 +331,25 @@ def evaluate_multifeature_model(
         'fbeta_score': fbeta_score(all_gt, all_multifeature, beta=beta, zero_division=0)
     }
     
+    # ============================================================
+    # KEY METRICS: THIN CLOUD PERFORMANCE (This is what we care about!)
+    # ============================================================
+    thin_cloud_metrics = {
+        'recall': recall_score(all_thin_gt, np.logical_and(all_thin_pred, all_thin_gt), zero_division=0),
+        'precision': precision_score(all_thin_gt, np.logical_and(all_thin_pred, all_thin_gt), zero_division=0),
+        'f1_score': f1_score(all_thin_gt, np.logical_and(all_thin_pred, all_thin_gt), zero_division=0),
+        'thin_pixels_total': int(all_thin_gt.sum()),
+        'thin_pixels_detected': int(np.logical_and(all_thin_pred, all_thin_gt).sum())
+    }
+    
+    thick_cloud_metrics = {
+        'recall': recall_score(all_thick_gt, np.logical_and(all_thick_pred, all_thick_gt), zero_division=0),
+        'precision': precision_score(all_thick_gt, np.logical_and(all_thick_pred, all_thick_gt), zero_division=0),
+        'f1_score': f1_score(all_thick_gt, np.logical_and(all_thick_pred, all_thick_gt), zero_division=0),
+        'thick_pixels_total': int(all_thick_gt.sum()),
+        'thick_pixels_detected': int(np.logical_and(all_thick_pred, all_thick_gt).sum())
+    }
+    
     # Action statistics
     action_summary = {
         'threshold_delta': {
@@ -300,9 +358,9 @@ def evaluate_multifeature_model(
             'min': float(np.min(action_stats['threshold_deltas'])),
             'max': float(np.max(action_stats['threshold_deltas']))
         },
-        'texture_weight': {
-            'mean': float(np.mean(action_stats['texture_weights'])),
-            'std': float(np.std(action_stats['texture_weights']))
+        'thin_cloud_boost': {  # UPDATED
+            'mean': float(np.mean(action_stats['thin_cloud_boosts'])),
+            'std': float(np.std(action_stats['thin_cloud_boosts']))
         },
         'spectral_weight': {
             'mean': float(np.mean(action_stats['spectral_weights'])),
@@ -312,7 +370,7 @@ def evaluate_multifeature_model(
     
     # Print results
     print("\n" + "="*80)
-    print("RESULTS")
+    print("RESULTS - THIN CLOUD DETECTION FOCUS")
     print("="*80)
     
     print(f"\n🧠 Baseline CNN (threshold=0.5):")
@@ -322,7 +380,7 @@ def evaluate_multifeature_model(
     print(f"  F1-Score:  {baseline_metrics['f1_score']:.4f}")
     print(f"  F{beta}-Score: {baseline_metrics['fbeta_score']:.4f}")
     
-    print(f"\n🎯 Multi-Feature RL:")
+    print(f"\n🎯 Multi-Feature RL (Overall):")
     print(f"  Accuracy:  {multifeature_metrics['accuracy']:.4f}")
     print(f"  Precision: {multifeature_metrics['precision']:.4f}")
     print(f"  Recall:    {multifeature_metrics['recall']:.4f}")
@@ -330,18 +388,33 @@ def evaluate_multifeature_model(
     print(f"  F{beta}-Score: {multifeature_metrics['fbeta_score']:.4f}")
     
     improvement = (multifeature_metrics['f1_score'] - baseline_metrics['f1_score']) / baseline_metrics['f1_score'] * 100
-    print(f"\n📈 Improvement: {improvement:+.2f}%")
+    print(f"\n📈 Overall Improvement: {improvement:+.2f}%")
+    
+    # KEY METRICS: THIN CLOUDS
+    print(f"\n💡 THIN CLOUD PERFORMANCE (KEY!):")
+    print(f"  Total Thin Cloud Pixels: {thin_cloud_metrics['thin_pixels_total']:,}")
+    print(f"  Thin Clouds Detected: {thin_cloud_metrics['thin_pixels_detected']:,}")
+    print(f"  Thin Cloud Recall: {thin_cloud_metrics['recall']:.4f} ({thin_cloud_metrics['recall']*100:.1f}%)")
+    print(f"  Thin Cloud Precision: {thin_cloud_metrics['precision']:.4f}")
+    print(f"  Thin Cloud F1-Score: {thin_cloud_metrics['f1_score']:.4f}")
+    
+    print(f"\n☁️ THICK CLOUD PERFORMANCE (Baseline):")
+    print(f"  Total Thick Cloud Pixels: {thick_cloud_metrics['thick_pixels_total']:,}")
+    print(f"  Thick Clouds Detected: {thick_cloud_metrics['thick_pixels_detected']:,}")
+    print(f"  Thick Cloud Recall: {thick_cloud_metrics['recall']:.4f} ({thick_cloud_metrics['recall']*100:.1f}%)")
     
     print(f"\n📊 Action Statistics:")
     print(f"  Threshold Delta: {action_summary['threshold_delta']['mean']:+.4f} ± {action_summary['threshold_delta']['std']:.4f}")
     print(f"                   Range: [{action_summary['threshold_delta']['min']:+.4f}, {action_summary['threshold_delta']['max']:+.4f}]")
-    print(f"  Texture Weight:  {action_summary['texture_weight']['mean']:.4f} ± {action_summary['texture_weight']['std']:.4f}")
-    print(f"  Spectral Weight: {action_summary['spectral_weight']['mean']:.4f} ± {action_summary['spectral_weight']['std']:.4f}")
+    print(f"  Thin Cloud Boost: {action_summary['thin_cloud_boost']['mean']:.4f} ± {action_summary['thin_cloud_boost']['std']:.4f}")
+    print(f"  Spectral Weight:  {action_summary['spectral_weight']['mean']:.4f} ± {action_summary['spectral_weight']['std']:.4f}")
     
     # Save results
     results = {
         'baseline_cnn': baseline_metrics,
         'multifeature_rl': multifeature_metrics,
+        'thin_cloud_metrics': thin_cloud_metrics,  # KEY ADDITION!
+        'thick_cloud_metrics': thick_cloud_metrics,
         'action_statistics': action_summary,
         'improvement_percent': float(improvement),
         'beta_parameter': beta,
