@@ -169,27 +169,40 @@ class MultiFeatureRefinementEnv(gym.Env):
         total_reflectance = self.blue_band + self.green_band + self.red_band + self.nir_band
         self.normalized_reflectance = total_reflectance / 4.0
         
-        # Thin cloud indicator: moderate reflectance + high blue/red ratio
-        thin_cloud_threshold_low = 1000   # Low reflectance
-        thin_cloud_threshold_high = 4000  # High reflectance (thick clouds)
+        # Adaptive thresholds based on data distribution
+        # Use percentiles to handle different scaling
+        reflectance_30th = np.percentile(self.normalized_reflectance, 30)
+        reflectance_70th = np.percentile(self.normalized_reflectance, 70)
         
+        # Thin cloud indicator: moderate reflectance + high blue/red ratio
         self.thin_cloud_indicator = np.logical_and(
-            self.normalized_reflectance > thin_cloud_threshold_low,
-            self.normalized_reflectance < thin_cloud_threshold_high
-        ).astype(np.float32) * (self.blue_red_ratio > 1.05).astype(np.float32)
+            np.logical_and(
+                self.normalized_reflectance > reflectance_30th,
+                self.normalized_reflectance < reflectance_70th
+            ),
+            self.blue_red_ratio > 1.05
+        ).astype(np.float32)
     
     def _classify_cloud_thickness(self):
         """
         Classify ground truth clouds into thin vs thick based on reflectance.
         This helps us reward thin cloud detection specifically.
+        
+        Uses actual satellite image reflectance to distinguish:
+        - Thin clouds: Low-medium reflectance (semi-transparent)
+        - Thick clouds: High reflectance (opaque)
         """
         # Where ground truth says there are clouds
         cloud_mask = self.ground_truth > 0
         
-        # Estimate thickness from reflectance
-        # Thin clouds: 1000-4000 reflectance
-        # Thick clouds: >4000 reflectance
-        thickness_threshold = 4000
+        # Calculate reflectance percentiles among cloud pixels only
+        if cloud_mask.sum() > 0:
+            cloud_reflectance = self.normalized_reflectance[cloud_mask]
+            # Use 70th percentile as threshold: bottom 70% = thin, top 30% = thick
+            thickness_threshold = np.percentile(cloud_reflectance, 70)
+        else:
+            # Fallback if no clouds
+            thickness_threshold = np.median(self.normalized_reflectance)
         
         self.thin_clouds_gt = np.logical_and(
             cloud_mask,
@@ -430,14 +443,21 @@ class MultiFeatureRefinementEnv(gym.Env):
         # ============================================================
         # KEY INNOVATION: THIN CLOUD BOOST
         # ============================================================
-        # Identify potential thin cloud pixels
+        # Identify potential thin cloud pixels using adaptive classification
         thin_indicator_patch = self.thin_cloud_indicator[i:i+self.patch_size, j:j+self.patch_size]
         blue_red_patch = self.blue_red_ratio[i:i+self.patch_size, j:j+self.patch_size]
         reflectance_patch = self.normalized_reflectance[i:i+self.patch_size, j:j+self.patch_size]
         
-        # Pixels that look like thin clouds (moderate reflectance + high blue/red ratio)
+        # Adaptive thresholds for thin cloud detection (same as classification)
+        if (self.ground_truth > 0).sum() > 0:
+            cloud_reflectance = self.normalized_reflectance[self.ground_truth > 0]
+            thin_threshold = np.percentile(cloud_reflectance, 70)
+        else:
+            thin_threshold = np.percentile(self.normalized_reflectance, 70)
+        
+        # Pixels that look like thin clouds (low-medium reflectance + high blue/red ratio)
         is_thin_cloud_like = np.logical_and(
-            np.logical_and(reflectance_patch > 1000, reflectance_patch < 4000),
+            reflectance_patch < thin_threshold,
             blue_red_patch > 1.05
         )
         
