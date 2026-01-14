@@ -152,35 +152,33 @@ class MultiFeatureRefinementEnv(gym.Env):
         """
         Compute indicators specifically for thin cloud detection.
         
+        Works with 0-1 normalized data (no hardcoded thresholds).
+        
         Thin clouds characteristics:
-        - Low but consistent reflectance across bands
-        - Smooth texture (low variance)
-        - Brightness temperature difference (BTD) - cirrus detection
-        - High blue/red ratio (scattering)
+        - Low-medium reflectance (compared to thick clouds)
+        - High blue/red ratio (increased scattering)
+        - Visible in CNN but with low confidence
         """
         # Reflectance ratio: Blue/Red (thin clouds scatter more blue light)
-        self.blue_red_ratio = np.where(
-            self.red_band > 100,
-            self.blue_band / (self.red_band + 1e-6),
-            0
-        )
+        # No threshold check - works with any data scale
+        self.blue_red_ratio = self.blue_band / (self.red_band + 1e-6)
         
-        # Normalized reflectance: how bright overall (thin clouds have low-medium reflectance)
+        # Normalized reflectance: average brightness across visible+NIR bands
         total_reflectance = self.blue_band + self.green_band + self.red_band + self.nir_band
         self.normalized_reflectance = total_reflectance / 4.0
         
         # Adaptive thresholds based on data distribution
-        # Use percentiles to handle different scaling
         reflectance_30th = np.percentile(self.normalized_reflectance, 30)
         reflectance_70th = np.percentile(self.normalized_reflectance, 70)
+        blue_red_median = np.median(self.blue_red_ratio)
         
-        # Thin cloud indicator: moderate reflectance + high blue/red ratio
+        # Thin cloud indicator: moderate reflectance + above-median blue/red ratio
         self.thin_cloud_indicator = np.logical_and(
             np.logical_and(
                 self.normalized_reflectance > reflectance_30th,
                 self.normalized_reflectance < reflectance_70th
             ),
-            self.blue_red_ratio > 1.05
+            self.blue_red_ratio > blue_red_median
         ).astype(np.float32)
     
     def _classify_cloud_thickness(self):
@@ -455,10 +453,13 @@ class MultiFeatureRefinementEnv(gym.Env):
         else:
             thin_threshold = np.percentile(self.normalized_reflectance, 70)
         
-        # Pixels that look like thin clouds (low-medium reflectance + high blue/red ratio)
+        # Calculate adaptive blue/red threshold
+        blue_red_median = np.median(self.blue_red_ratio)
+        
+        # Pixels that look like thin clouds (low-medium reflectance + above-median blue/red)
         is_thin_cloud_like = np.logical_and(
             reflectance_patch < thin_threshold,
-            blue_red_patch > 1.05
+            blue_red_patch > blue_red_median
         )
         
         # Boost CNN probability for thin cloud-like pixels

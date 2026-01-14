@@ -43,8 +43,8 @@ def analyze_cloud_features(image_files, mask_files, num_samples=10):
             red = image[:, :, 3].astype(np.float32)
             nir = image[:, :, 7].astype(np.float32)
             
-            # Calculate features
-            blue_red_ratio = np.where(red > 100, blue / (red + 1e-6), 0)
+            # Calculate features (no hardcoded thresholds)
+            blue_red_ratio = blue / (red + 1e-6)  # Works with any scale
             reflectance = (blue + green + red + nir) / 4.0
             ndvi = np.where(nir + red > 0, (nir - red) / (nir + red + 1e-6), 0)
             
