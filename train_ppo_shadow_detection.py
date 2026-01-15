@@ -432,7 +432,3 @@ if __name__ == "__main__":
             sys.exit(1)
     
     model, results = train_shadow_detection_rl(resume_from=resume_from)
-        data_dir='data/cloudsen12_processed',
-        total_timesteps=500000,
-        beta=0.7
-    )
