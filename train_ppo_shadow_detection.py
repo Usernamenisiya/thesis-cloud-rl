@@ -31,7 +31,7 @@ from rl_shadow_detection_environment import ShadowDetectionEnv
 def train_shadow_detection_rl(data_dir='data/cloudsen12_processed', 
                               total_timesteps=500000,
                               beta=0.7,
-                              checkpoint_dir='checkpoints/shadow_detection',
+                              checkpoint_dir=None,
                               resume_from=None,
                               checkpoint_freq=10):
     """
@@ -41,10 +41,21 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
         data_dir: Directory containing processed CloudSEN12 patches
         total_timesteps: Number of training steps
         beta: F-beta parameter (< 1 emphasizes precision)
-        checkpoint_dir: Directory to save checkpoints
+        checkpoint_dir: Directory to save checkpoints (auto-detects Google Drive if None)
         resume_from: Path to checkpoint to resume from (e.g., 'checkpoints/shadow_detection/checkpoint_epoch_20')
         checkpoint_freq: Save checkpoint every N epochs
     """
+    # Auto-detect Google Drive for checkpoints
+    if checkpoint_dir is None:
+        if os.path.exists('/content/drive/MyDrive'):
+            checkpoint_dir = '/content/drive/MyDrive/thesis_checkpoints/shadow_detection'
+            print("📁 Google Drive detected - checkpoints will be saved to Drive")
+        else:
+            checkpoint_dir = 'checkpoints/shadow_detection'
+            print("📁 Using local checkpoint directory (won't persist if Colab disconnects!)")
+    
+    print(f"💾 Checkpoint directory: {checkpoint_dir}")
+    
     # Create checkpoint directory
     os.makedirs(checkpoint_dir, exist_ok=True)
     # Load all patches
