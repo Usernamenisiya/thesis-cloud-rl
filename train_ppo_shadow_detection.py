@@ -30,7 +30,10 @@ from rl_shadow_detection_environment import ShadowDetectionEnv
 
 def train_shadow_detection_rl(data_dir='data/cloudsen12_processed', 
                               total_timesteps=500000,
-                              beta=0.7):
+                              beta=0.7,
+                              checkpoint_dir='checkpoints/shadow_detection',
+                              resume_from=None,
+                              checkpoint_freq=10):
     """
     Train PPO agent with shadow detection and filtering.
     
@@ -38,7 +41,12 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
         data_dir: Directory containing processed CloudSEN12 patches
         total_timesteps: Number of training steps
         beta: F-beta parameter (< 1 emphasizes precision)
+        checkpoint_dir: Directory to save checkpoints
+        resume_from: Path to checkpoint to resume from (e.g., 'checkpoints/shadow_detection/checkpoint_epoch_20')
+        checkpoint_freq: Save checkpoint every N epochs
     """
+    # Create checkpoint directory
+    os.makedirs(checkpoint_dir, exist_ok=True)
     # Load all patches
     image_files = sorted(glob.glob(f'{data_dir}/*_image.tif'))
     mask_files = sorted(glob.glob(f'{data_dir}/*_mask.tif'))
@@ -51,6 +59,23 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
     train_masks = mask_files[:split_idx]
     test_images = image_files[split_idx:]
     test_masks = mask_files[split_idx:]
+    
+    # Check for resume
+    start_epoch = 1
+    model = None
+    action_history = []
+    
+    if resume_from:
+        print(f"\n🔄 RESUMING from checkpoint: {resume_from}")
+        checkpoint_state = f"{resume_from}_state.json"
+        if os.path.exists(checkpoint_state):
+            with open(checkpoint_state, 'r') as f:
+                state = json.load(f)
+                start_epoch = state['epoch'] + 1
+                action_history = state.get('action_history', [])
+            print(f"   Resuming from epoch {start_epoch}/{len(train_images)}")
+        else:
+            print(f"   ⚠️ State file not found, starting from epoch {start_epoch}")
     
     print(f"   Training: {len(train_images)} patches")
     print(f"   Test: {len(test_images)} patches")
@@ -94,34 +119,44 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
     print(f"   Action space: {env.action_space.shape}")
     print(f"   Patches per image: {env.get_attr('num_patches')[0]}")
     
-    # Create PPO agent
-    print("\n🤖 Initializing PPO agent...")
-    model = PPO(
-        "MlpPolicy",
-        env,
-        learning_rate=3e-4,
-        n_steps=2048,
-        batch_size=64,
-        verbose=1,
-        tensorboard_log="./logs/ppo_shadow_detection/"
-    )
-    print("✅ PPO agent initialized")
+    # Create or load PPO agent
+    if resume_from and os.path.exists(f"{resume_from}.zip"):
+        print(f"\n🤖 Loading model from checkpoint...")
+        model = PPO.load(resume_from, env=env, tensorboard_log="./logs/ppo_shadow_detection/")
+        print("✅ Model loaded from checkpoint")
+    else:
+        print("\n🤖 Initializing new PPO agent...")
+        model = PPO(
+            "MlpPolicy",
+            env,
+            learning_rate=3e-4,
+            n_steps=2048,
+            batch_size=64,
+            verbose=1,
+            tensorboard_log="./logs/ppo_shadow_detection/"
+        )
+        print("✅ PPO agent initialized")
     print(f"   Policy: MLP")
     print(f"   Steps per update: 2048")
     print(f"   Batch size: 64")
     
     # Training loop
     print(f"\n🏋️ Starting training on {len(train_images)} patches...")
+    if start_epoch > 1:
+        print(f"   Resuming from epoch {start_epoch}")
     print("This will take approximately 2-3 hours.")
-    print("\n⚠️  MONITORING: Will check for degenerate policies every 10 epochs")
+    print(f"\n💾 CHECKPOINTS: Saving every {checkpoint_freq} epochs to {checkpoint_dir}")
+    print("⚠️  MONITORING: Will check for degenerate policies every 10 epochs")
     print()
     
     steps_per_patch = env.get_attr('num_patches')[0] * 2048
     
-    # Monitoring variables
-    action_history = []
+    # Training data (skip already trained epochs if resuming)
+    training_pairs = list(enumerate(zip(train_images, train_masks), 1))
+    if start_epoch > 1:
+        training_pairs = [(e, (i, m)) for e, (i, m) in training_pairs if e >= start_epoch]
     
-    for epoch, (img_path, mask_path) in enumerate(zip(train_images, train_masks), 1):
+    for epoch, (img_path, mask_path) in training_pairs:
         # Load new patch
         image = load_sentinel2_image(img_path)
         cnn_prob = get_cloud_mask(image)
@@ -172,6 +207,23 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
                 print(f"     ⚠️  WARNING: Shadow filter converging to extreme ({shadow_mean:.3f})")
             if threshold_std < 0.02 and shadow_std < 0.02:
                 print(f"     ⚠️  WARNING: Both actions have very low variance - possible degenerate policy!")
+        
+        # CHECKPOINT: Save every N epochs
+        if epoch % checkpoint_freq == 0:
+            checkpoint_path = f"{checkpoint_dir}/checkpoint_epoch_{epoch}"
+            model.save(checkpoint_path)
+            
+            # Save training state
+            state = {
+                'epoch': epoch,
+                'total_epochs': len(train_images),
+                'action_history': action_history,
+                'timestamp': datetime.now().isoformat()
+            }
+            with open(f"{checkpoint_path}_state.json", 'w') as f:
+                json.dump(state, f, indent=2)
+            
+            print(f"  💾 Checkpoint saved: {checkpoint_path}")
     
     # Save model
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -366,7 +418,20 @@ def evaluate_shadow_detection_model(model, test_images, test_masks, beta=0.7):
 
 
 if __name__ == "__main__":
-    model, results = train_shadow_detection_rl(
+    import sys
+    
+    # Check for resume argument
+    resume_from = None
+    if len(sys.argv) > 1 and sys.argv[1] == '--resume':
+        if len(sys.argv) > 2:
+            resume_from = sys.argv[2]
+            print(f"\n🔄 Resume mode: {resume_from}")
+        else:
+            print("\n⚠️  Usage: python train_ppo_shadow_detection.py --resume <checkpoint_path>")
+            print("   Example: python train_ppo_shadow_detection.py --resume checkpoints/shadow_detection/checkpoint_epoch_20")
+            sys.exit(1)
+    
+    model, results = train_shadow_detection_rl(resume_from=resume_from)
         data_dir='data/cloudsen12_processed',
         total_timesteps=500000,
         beta=0.7
