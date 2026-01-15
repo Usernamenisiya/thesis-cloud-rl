@@ -74,9 +74,10 @@ class ShadowDetectionEnv(gym.Env):
         self._compute_shadow_indicators()
         
         # Action space: [threshold_delta, shadow_filter_strength]
+        # CONSTRAINED to prevent extremes that led to "predict nothing" policy
         self.action_space = spaces.Box(
-            low=np.array([-0.3, 0.0]),
-            high=np.array([0.3, 1.0]),
+            low=np.array([-0.15, 0.0]),   # Reduced from -0.3 to -0.15
+            high=np.array([0.15, 0.6]),   # Reduced from 0.3/1.0 to 0.15/0.6
             dtype=np.float32
         )
         
@@ -257,41 +258,57 @@ class ShadowDetectionEnv(gym.Env):
         
         return obs.astype(np.float32)
     
-    def _compute_reward(self, prediction, i, j):
+    def _compute_reward(self, prediction, i, j, threshold_delta, shadow_filter_strength):
         """
         Compute reward for the prediction.
         
-        Focus on improving precision by correctly filtering shadows.
+        REDESIGNED to prevent "predict nothing" degenerate policy:
+        1. Strong penalties for catastrophic behaviors
+        2. Balanced precision/recall requirements
+        3. Action regularization to discourage extremes
+        4. F-beta base reward without easy-to-hack bonuses
         """
         gt_patch = self.ground_truth[i:i+self.patch_size, j:j+self.patch_size]
         gt_binary = (gt_patch > 0).astype(np.uint8).flatten()
         pred_flat = prediction.flatten()
         
-        # Skip if no variation
-        if pred_flat.sum() == 0 or pred_flat.sum() == len(pred_flat):
-            return 0.0
+        # CATASTROPHIC PENALTIES - prevent reward hacking
+        if pred_flat.sum() == 0:  # Predicting nothing
+            return -50.0
+        if pred_flat.sum() == len(pred_flat):  # Predicting everything
+            return -50.0
         
         # Base metrics
         fbeta = fbeta_score(gt_binary, pred_flat, beta=self.beta, zero_division=0)
         precision = precision_score(gt_binary, pred_flat, zero_division=0)
         recall = recall_score(gt_binary, pred_flat, zero_division=0)
+        f1 = f1_score(gt_binary, pred_flat, zero_division=0)
         
-        # Base reward: improvement over baseline
-        reward = (fbeta - self.baseline_fbeta) * 100
+        # Base reward: F-beta score scaled to reasonable range
+        reward = fbeta * 10.0  # 0-10 range
         
-        # BONUS for high precision (reducing false positives is the goal!)
-        if precision > 0.3:
-            reward += 2.0
-        if precision > 0.4:
+        # HARD FLOOR on recall - prevent excessive filtering
+        if recall < 0.15:
+            reward -= 20.0  # Massive penalty
+        elif recall < 0.25:
+            reward -= 10.0
+        
+        # HARD FLOOR on precision - prevent spam predictions
+        if precision < 0.10:
+            reward -= 15.0
+        elif precision < 0.15:
+            reward -= 5.0
+        
+        # Bonus for balanced improvement (both precision AND recall matter)
+        if precision > 0.25 and recall > 0.30:
             reward += 3.0
-        if precision > 0.5:
+        if f1 > 0.30:  # Beat Phase 1 ceiling
             reward += 5.0
         
-        # PENALTY for low recall (don't filter too aggressively)
-        if recall < 0.4:
-            reward -= 2.0
-        if recall < 0.3:
-            reward -= 5.0
+        # ACTION REGULARIZATION - penalize extreme actions
+        # Encourages moderate adjustments over drastic changes
+        action_penalty = 0.5 * (abs(threshold_delta / 0.15) + abs(shadow_filter_strength / 0.6))
+        reward -= action_penalty
         
         return reward
     
@@ -307,9 +324,9 @@ class ShadowDetectionEnv(gym.Env):
         """Take a step in the environment."""
         i, j = self.current_pos
         
-        # Clip and store actions
-        threshold_delta = np.clip(action[0], -0.3, 0.3)
-        shadow_filter_strength = np.clip(action[1], 0.0, 1.0)
+        # Clip and store actions (with new constrained ranges)
+        threshold_delta = np.clip(action[0], -0.15, 0.15)
+        shadow_filter_strength = np.clip(action[1], 0.0, 0.6)
         self.current_actions = np.array([threshold_delta, shadow_filter_strength])
         
         # Extract patches
@@ -341,8 +358,8 @@ class ShadowDetectionEnv(gym.Env):
         # Apply shadow filter
         final_pred = (initial_pred * shadow_mask).astype(np.uint8)
         
-        # Compute reward
-        reward = self._compute_reward(final_pred, i, j)
+        # Compute reward (pass actions for regularization)
+        reward = self._compute_reward(final_pred, i, j, threshold_delta, shadow_filter_strength)
         
         # Move to next patch
         self.current_patch_idx += 1

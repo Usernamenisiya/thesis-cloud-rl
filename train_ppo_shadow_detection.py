@@ -56,7 +56,7 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
     print(f"   Test: {len(test_images)} patches")
     
     print("\n" + "="*80)
-    print("🎯 TRAINING SHADOW DETECTION RL AGENT")
+    print("🎯 TRAINING SHADOW DETECTION RL AGENT (FIXED V2)")
     print("="*80)
     print(f"Training patches: {len(train_images)}")
     print(f"Total timesteps: {total_timesteps:,}")
@@ -67,12 +67,15 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
     print("  - Brightness (shadows very dark)")
     print("  - Edge strength (shadows have sharp edges)")
     print("  - Blue scattering (clouds scatter blue, shadows don't)")
-    print("\nACTIONS:")
-    print("  - threshold_delta: Base threshold adjustment")
-    print("  - shadow_filter_strength: How aggressively to filter shadows")
-    print("\nREWARD:")
-    print("  - BIG BONUS for precision >30%, >40%, >50%")
-    print("  - PENALTY for recall <40% (don't over-filter)")
+    print("\nACTIONS (CONSTRAINED):")
+    print("  - threshold_delta: [-0.15, +0.15] (was -0.3/+0.3)")
+    print("  - shadow_filter_strength: [0, 0.6] (was 0/1.0)")
+    print("\nREWARD (REDESIGNED):")
+    print("  - Base: F-beta * 10")
+    print("  - CATASTROPHIC penalties for predict-nothing/everything (-50)")
+    print("  - Hard floors: recall >0.15, precision >0.10")
+    print("  - Bonuses for balanced improvement (precision + recall)")
+    print("  - Action regularization (penalize extremes)")
     print("="*80)
     
     # Load first training patch for environment initialization
@@ -110,9 +113,13 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
     # Training loop
     print(f"\n🏋️ Starting training on {len(train_images)} patches...")
     print("This will take approximately 2-3 hours.")
+    print("\n⚠️  MONITORING: Will check for degenerate policies every 10 epochs")
     print()
     
     steps_per_patch = env.get_attr('num_patches')[0] * 2048
+    
+    # Monitoring variables
+    action_history = []
     
     for epoch, (img_path, mask_path) in enumerate(zip(train_images, train_masks), 1):
         # Load new patch
@@ -130,13 +137,54 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
         
         # Train on this patch
         model.learn(total_timesteps=steps_per_patch, reset_num_timesteps=False)
+        
+        # SAFETY CHECK: Monitor actions every 10 epochs
+        if epoch % 10 == 0:
+            obs = env.reset()
+            actions_sample = []
+            for _ in range(50):  # Sample 50 actions
+                action, _ = model.predict(obs, deterministic=False)
+                actions_sample.append(action[0])
+                obs, _, done, _, _ = env.step(action)
+                if done[0]:
+                    obs = env.reset()
+            
+            actions_array = np.array(actions_sample)
+            threshold_mean = actions_array[:, 0].mean()
+            threshold_std = actions_array[:, 0].std()
+            shadow_mean = actions_array[:, 1].mean()
+            shadow_std = actions_array[:, 1].std()
+            
+            action_history.append({
+                'epoch': epoch,
+                'threshold_delta': {'mean': float(threshold_mean), 'std': float(threshold_std)},
+                'shadow_filter': {'mean': float(shadow_mean), 'std': float(shadow_std)}
+            })
+            
+            print(f"  🔍 Action Check @ Epoch {epoch}:")
+            print(f"     Threshold Delta: {threshold_mean:.3f} ± {threshold_std:.3f} (range: [{actions_array[:, 0].min():.3f}, {actions_array[:, 0].max():.3f}])")
+            print(f"     Shadow Filter: {shadow_mean:.3f} ± {shadow_std:.3f} (range: [{actions_array[:, 1].min():.3f}, {actions_array[:, 1].max():.3f}])")
+            
+            # WARNING if converging to extremes
+            if threshold_std < 0.02 and (abs(threshold_mean + 0.15) < 0.01 or abs(threshold_mean - 0.15) < 0.01):
+                print(f"     ⚠️  WARNING: Threshold delta converging to extreme ({threshold_mean:.3f})")
+            if shadow_std < 0.02 and (shadow_mean < 0.01 or shadow_mean > 0.59):
+                print(f"     ⚠️  WARNING: Shadow filter converging to extreme ({shadow_mean:.3f})")
+            if threshold_std < 0.02 and shadow_std < 0.02:
+                print(f"     ⚠️  WARNING: Both actions have very low variance - possible degenerate policy!")
     
     # Save model
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     model_dir = f"models/ppo_shadow_detection_{timestamp}"
     os.makedirs(model_dir, exist_ok=True)
     model.save(f"{model_dir}/model")
+    
+    # Save action history
+    with open(f"{model_dir}/action_history.json", 'w') as f:
+        json.dump(action_history, f, indent=2)
+    
     print(f"\n💾 Model saved to: {model_dir}")
+    print(f"💾 Action history saved for analysis")
     
     # Evaluation
     print("\n" + "="*80)
