@@ -28,7 +28,7 @@ from cnn_inference import load_sentinel2_image, get_cloud_mask
 from rl_shadow_detection_environment import ShadowDetectionEnv
 
 
-def train_shadow_detection_rl(data_dir='data/cloudsen12_processed', 
+def train_shadow_detection_rl(data_dir=None, 
                               total_timesteps=500000,
                               beta=0.7,
                               checkpoint_dir=None,
@@ -38,13 +38,27 @@ def train_shadow_detection_rl(data_dir='data/cloudsen12_processed',
     Train PPO agent with shadow detection and filtering.
     
     Args:
-        data_dir: Directory containing processed CloudSEN12 patches
+        data_dir: Directory containing processed CloudSEN12 patches (auto-detects Google Drive if None)
         total_timesteps: Number of training steps
         beta: F-beta parameter (< 1 emphasizes precision)
         checkpoint_dir: Directory to save checkpoints (auto-detects Google Drive if None)
         resume_from: Path to checkpoint to resume from (e.g., 'checkpoints/shadow_detection/checkpoint_epoch_20')
         checkpoint_freq: Save checkpoint every N epochs
     """
+    # Auto-detect data directory
+    if data_dir is None:
+        if os.path.exists('/content/drive/MyDrive/Colab_Data/cloudsen12_processed_1000'):
+            data_dir = '/content/drive/MyDrive/Colab_Data/cloudsen12_processed_1000'
+            print("📁 Google Drive dataset detected (1000 patches)")
+        elif os.path.exists('/content/drive/MyDrive/Colab_Data/cloudsen12_processed'):
+            data_dir = '/content/drive/MyDrive/Colab_Data/cloudsen12_processed'
+            print("📁 Google Drive dataset detected (100 patches)")
+        else:
+            data_dir = 'data/cloudsen12_processed'
+            print("📁 Using local dataset")
+    
+    print(f"📂 Data directory: {data_dir}")
+    
     # Auto-detect Google Drive for checkpoints
     if checkpoint_dir is None:
         if os.path.exists('/content/drive/MyDrive'):
