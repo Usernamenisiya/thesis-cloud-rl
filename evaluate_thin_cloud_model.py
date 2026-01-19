@@ -49,10 +49,22 @@ thin_rl = {'tp': 0, 'fp': 0, 'fn': 0}
 
 num_samples = min(len(test_images), 100)
 
+# Debug: Track model actions
+all_threshold_deltas = []
+all_thin_boosts = []
+
 for idx in range(num_samples):
     # Load image and get CNN probability
     image = load_sentinel2_image(test_images[idx])
     cnn_prob = get_cloud_mask(image)
+    
+    # Debug: Check CNN probability range on first image
+    if idx == 0:
+        print(f"\n🔍 DEBUG - Image 0:")
+        print(f"   Image value range: {image.min():.4f} to {image.max():.4f}")
+        print(f"   CNN prob range: {cnn_prob.min():.4f} to {cnn_prob.max():.4f}")
+        print(f"   CNN prob mean: {cnn_prob.mean():.4f}")
+        print(f"   Pixels > 0.5: {(cnn_prob > 0.5).sum()} / {cnn_prob.size} ({(cnn_prob > 0.5).mean()*100:.1f}%)")
     
     with rasterio.open(test_masks[idx]) as src:
         gt_raw = src.read(1)
@@ -85,6 +97,10 @@ for idx in range(num_samples):
         # Apply action to patch
         threshold_delta = np.clip(action[0], -0.2, 0.2)
         thin_boost = np.clip(action[1], 0.0, 0.3)
+        
+        # Track actions for debugging
+        all_threshold_deltas.append(threshold_delta)
+        all_thin_boosts.append(thin_boost)
         
         # Get patch data
         cnn_patch = cnn_prob[i:i+ps, j:j+ps].copy()
@@ -120,6 +136,11 @@ for idx in range(num_samples):
     
     if (idx + 1) % 20 == 0:
         print(f"  Processed {idx + 1}/{num_samples} patches...")
+
+# Debug: Show action statistics
+print(f"\n🔍 DEBUG - Model Actions:")
+print(f"   Threshold delta: mean={np.mean(all_threshold_deltas):.4f}, range=[{np.min(all_threshold_deltas):.4f}, {np.max(all_threshold_deltas):.4f}]")
+print(f"   Thin boost: mean={np.mean(all_thin_boosts):.4f}, range=[{np.min(all_thin_boosts):.4f}, {np.max(all_thin_boosts):.4f}]")
 
 # Compute metrics from confusion matrix
 def compute_metrics(m):
