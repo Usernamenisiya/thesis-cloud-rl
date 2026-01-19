@@ -38,23 +38,47 @@ from rl_thin_cloud_environment import ThinCloudDetectionEnv
 
 
 class ThinCloudMetricsCallback(BaseCallback):
-    """Callback to track thin cloud detection performance."""
+    """Callback to track thin cloud detection performance with early stopping."""
     
-    def __init__(self, eval_freq=5000, verbose=1):
+    def __init__(self, eval_freq=5000, patience=5, min_delta=0.01, verbose=1):
         super().__init__(verbose)
         self.eval_freq = eval_freq
+        self.thin_cloud_ious = []
         self.rewards = []
+        self.reward_history = []  # Track rewards over windows
+        self.patience = patience  # Number of windows to wait
+        self.min_delta = min_delta  # Minimum improvement threshold
+        self.best_reward = -np.inf
+        self.patience_counter = 0
+        self.should_stop = False
         
     def _on_step(self):
-        # Collect rewards
-        if 'rewards' in self.locals:
-            self.rewards.append(self.locals.get('rewards', [0])[0])
-        
-        # Log progress every eval_freq steps
-        if self.n_calls % self.eval_freq == 0 and len(self.rewards) > 0:
-            avg_reward = np.mean(self.rewards[-100:])
-            print(f"  Step {self.n_calls:,}: Avg reward = {avg_reward:.4f}")
-        
+        if self.n_calls % self.eval_freq == 0:
+            # Log progress
+            if len(self.rewards) > 0:
+                avg_reward = np.mean(self.rewards[-100:])
+                print(f"  Step {self.n_calls:,}: Avg reward = {avg_reward:.4f}")
+                self.reward_history.append(avg_reward)
+                
+                # Early stopping logic: check if improving
+                if len(self.reward_history) >= 2:
+                    if avg_reward > self.best_reward + self.min_delta:
+                        # Significant improvement
+                        self.best_reward = avg_reward
+                        self.patience_counter = 0
+                    else:
+                        # No improvement
+                        self.patience_counter += 1
+                        
+                    if self.patience_counter >= self.patience:
+                        print(f"\n⚠️  EARLY STOPPING triggered!")
+                        print(f"   No improvement for {self.patience} checkpoints ({self.patience * self.eval_freq:,} steps)")
+                        print(f"   Best reward: {self.best_reward:.4f}")
+                        print(f"   Current reward: {avg_reward:.4f}")
+                        self.should_stop = True
+                        return False  # Stop training
+                        
+            self.rewards.append(self.locals.get('rewards', [0])[0] if 'rewards' in self.locals else 0)
         return True
 
 
@@ -186,9 +210,9 @@ def evaluate_thin_cloud_performance(model, image_files, mask_files, num_samples=
 def train_thin_cloud_detection(
     image_files,
     mask_files,
-    steps_per_session=240000,  # Train to 240k like the successful run
-    checkpoint_dir="/content/drive/MyDrive/Colab_Data/checkpoints/thin_cloud",  # Save to Drive!
-    model_dir="/content/drive/MyDrive/Colab_Data/models",  # Save to Drive!
+    steps_per_session=100000,
+    checkpoint_dir="checkpoints/thin_cloud",
+    model_dir="models",
     patches_per_epoch=100  # Limit episodes per scene as recommended
 ):
     """
@@ -251,19 +275,29 @@ def train_thin_cloud_detection(
         )
     
     # Callbacks
-    metrics_callback = ThinCloudMetricsCallback(eval_freq=5000)
+    checkpoint_callback = CheckpointCallback(
+        save_freq=10000,
+        save_path=checkpoint_dir,
+        name_prefix="thin_cloud"
+    )
+    # Early stopping: patience=5 means if no improvement (>0.01) for 5 windows (25k steps), stop
+    metrics_callback = ThinCloudMetricsCallback(eval_freq=5000, patience=5, min_delta=0.01)
     
     # Training loop with random scene sampling
     print(f"\n🚀 Training for {steps_per_session:,} steps...")
     print(f"   Using {len(image_files)} training scenes")
     print(f"   {patches_per_epoch} patches per scene max")
-    print(f"   Checkpoints saved every 10k steps to: {checkpoint_dir}")
+    print(f"   Early stopping: patience={metrics_callback.patience}, min_delta={metrics_callback.min_delta}")
     
     total_steps = 0
     scene_count = 0
-    last_checkpoint_step = 0
     
     while total_steps < steps_per_session:
+        # Check early stopping
+        if metrics_callback.should_stop:
+            print(f"\n🛑 Training stopped early at {total_steps:,}/{steps_per_session:,} steps")
+            break
+            
         # Sample random scene
         idx = np.random.randint(len(image_files))
         image = load_sentinel2_image(image_files[idx])
@@ -283,21 +317,13 @@ def train_thin_cloud_detection(
         # Train on this scene
         model.learn(
             total_timesteps=steps_this_scene,
-            callback=[metrics_callback],  # Removed checkpoint_callback - doing manual saves
+            callback=[checkpoint_callback, metrics_callback],
             reset_num_timesteps=False,
             progress_bar=False
         )
         
         total_steps += steps_this_scene
         scene_count += 1
-        
-        # MANUAL CHECKPOINT SAVING - every 10k steps
-        if total_steps // 10000 > last_checkpoint_step:
-            checkpoint_step = (total_steps // 10000) * 10000
-            checkpoint_path = f"{checkpoint_dir}/thin_cloud_{checkpoint_step}_steps"
-            model.save(checkpoint_path)
-            last_checkpoint_step = total_steps // 10000
-            print(f"\n💾 Checkpoint saved: {checkpoint_path}.zip")
         
         if scene_count % 20 == 0:
             print(f"  Processed {scene_count} scenes, {total_steps:,} total steps")
@@ -352,19 +378,11 @@ def main():
     
     print(f"🎓 Training on {len(train_images)} images")
     
-    # Train - SAVE TO GOOGLE DRIVE so checkpoints persist!
-    checkpoint_dir = '/content/drive/MyDrive/Colab_Data/checkpoints/thin_cloud'
-    model_dir = '/content/drive/MyDrive/Colab_Data/models'
-    
-    print(f"\n💾 Checkpoints will be saved to: {checkpoint_dir}")
-    print(f"   (This persists across Colab sessions!)")
-    
+    # Train
     model, thin_iou = train_thin_cloud_detection(
         train_images,
         train_masks,
-        steps_per_session=240000,  # Match the successful 240k run
-        checkpoint_dir=checkpoint_dir,
-        model_dir=model_dir,
+        steps_per_session=100000,
         patches_per_epoch=100  # As recommended: limit episodes per scene
     )
     
