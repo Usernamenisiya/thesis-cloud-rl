@@ -19,10 +19,11 @@ print("="*70)
 
 # Load model - check multiple possible locations
 checkpoint_locations = [
+    '/content/drive/MyDrive/thin_cloud_rl_v1/model.zip',  # Pretrained model on Drive
     '/content/drive/MyDrive/Colab_Data/checkpoints/thin_cloud/thin_cloud_*_steps.zip',
     '/content/drive/MyDrive/Colab_Data/models/ppo_thin_cloud_*/model.zip',
+    'pretrained_models/thin_cloud_rl_v1/model.zip',
     'checkpoints/thin_cloud/thin_cloud_*_steps.zip',
-    '/content/drive/MyDrive/checkpoints/thin_cloud/thin_cloud_*_steps.zip'
 ]
 
 checkpoint_paths = []
