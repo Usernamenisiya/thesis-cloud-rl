@@ -251,20 +251,17 @@ def train_thin_cloud_detection(
         )
     
     # Callbacks
-    checkpoint_callback = CheckpointCallback(
-        save_freq=10000,
-        save_path=checkpoint_dir,
-        name_prefix="thin_cloud"
-    )
     metrics_callback = ThinCloudMetricsCallback(eval_freq=5000)
     
     # Training loop with random scene sampling
     print(f"\n🚀 Training for {steps_per_session:,} steps...")
     print(f"   Using {len(image_files)} training scenes")
     print(f"   {patches_per_epoch} patches per scene max")
+    print(f"   Checkpoints saved every 10k steps to: {checkpoint_dir}")
     
     total_steps = 0
     scene_count = 0
+    last_checkpoint_step = 0
     
     while total_steps < steps_per_session:
         # Sample random scene
@@ -286,13 +283,21 @@ def train_thin_cloud_detection(
         # Train on this scene
         model.learn(
             total_timesteps=steps_this_scene,
-            callback=[checkpoint_callback, metrics_callback],
+            callback=[metrics_callback],  # Removed checkpoint_callback - doing manual saves
             reset_num_timesteps=False,
             progress_bar=False
         )
         
         total_steps += steps_this_scene
         scene_count += 1
+        
+        # MANUAL CHECKPOINT SAVING - every 10k steps
+        if total_steps // 10000 > last_checkpoint_step:
+            checkpoint_step = (total_steps // 10000) * 10000
+            checkpoint_path = f"{checkpoint_dir}/thin_cloud_{checkpoint_step}_steps"
+            model.save(checkpoint_path)
+            last_checkpoint_step = total_steps // 10000
+            print(f"\n💾 Checkpoint saved: {checkpoint_path}.zip")
         
         if scene_count % 20 == 0:
             print(f"  Processed {scene_count} scenes, {total_steps:,} total steps")
