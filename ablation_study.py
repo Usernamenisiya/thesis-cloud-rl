@@ -18,10 +18,23 @@ print("="*70)
 print("Testing model performance with and without thin cloud boost action")
 print("="*70)
 
-# Load model
-checkpoint_paths = sorted(glob.glob('checkpoints/thin_cloud/thin_cloud_*_steps.zip'))
+# Load model - check multiple possible locations
+checkpoint_locations = [
+    '/content/drive/MyDrive/Colab_Data/checkpoints/thin_cloud/thin_cloud_*_steps.zip',
+    'checkpoints/thin_cloud/thin_cloud_*_steps.zip',
+    '/content/drive/MyDrive/checkpoints/thin_cloud/thin_cloud_*_steps.zip'
+]
+
+checkpoint_paths = []
+for loc in checkpoint_locations:
+    checkpoint_paths = sorted(glob.glob(loc))
+    if checkpoint_paths:
+        break
+
 if not checkpoint_paths:
-    print("❌ No checkpoints found!")
+    print("❌ No checkpoints found! Tried:")
+    for loc in checkpoint_locations:
+        print(f"   - {loc}")
     exit(1)
 
 model_path = checkpoint_paths[-1]
