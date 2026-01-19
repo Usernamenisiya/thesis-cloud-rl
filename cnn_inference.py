@@ -26,10 +26,22 @@ def load_sentinel2_image(image_path):
 def get_cloud_mask(image):
     """
     Get cloud probability mask from CNN.
-    Image is (H, W, 10)
+    Image is (H, W, bands)
+    
+    s2cloudless expects reflectance values in 0-1 range.
+    CloudSEN12 data may be:
+    - Already normalized (0-1 range)
+    - Raw DN values (0-10000 range)
     """
+    # Auto-detect normalization: if max > 1, assume raw DN values
+    if image.max() > 1.0:
+        # Normalize from DN (0-10000) to reflectance (0-1)
+        image_normalized = image / 10000.0
+    else:
+        image_normalized = image
+    
     # s2cloudless expects (batch, H, W, bands)
-    image_batched = image[np.newaxis, ...]  # to (1, H, W, 10)
+    image_batched = image_normalized[np.newaxis, ...]  # to (1, H, W, bands)
     cloud_prob = cloud_detector.get_cloud_probability_maps(image_batched)
     # cloud_prob is (1, H, W), so squeeze to (H, W)
     return cloud_prob[0]

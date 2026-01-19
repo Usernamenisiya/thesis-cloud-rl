@@ -115,6 +115,13 @@ for idx in range(num_samples):
         if done:
             break
     
+    # Debug: Check if RL predictions differ from baseline
+    if idx == 0:
+        diff_pixels = np.sum(rl_pred != baseline_pred)
+        print(f"   RL vs Baseline different pixels: {diff_pixels} / {rl_pred.size} ({diff_pixels/rl_pred.size*100:.2f}%)")
+        print(f"   Baseline cloud pixels: {baseline_pred.sum()}")
+        print(f"   RL cloud pixels: {rl_pred.sum()}")
+    
     # Accumulate overall metrics
     baseline_metrics['tp'] += np.sum((baseline_pred == 1) & (gt_binary == 1))
     baseline_metrics['fp'] += np.sum((baseline_pred == 1) & (gt_binary == 0))
