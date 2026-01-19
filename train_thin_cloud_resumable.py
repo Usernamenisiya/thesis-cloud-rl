@@ -53,7 +53,12 @@ class ThinCloudMetricsCallback(BaseCallback):
         self.should_stop = False
         
     def _on_step(self):
-        if self.n_calls % self.eval_freq == 0:
+        # Collect rewards
+        if 'rewards' in self.locals:
+            self.rewards.append(self.locals.get('rewards', [0])[0])
+        
+        # Only check early stopping at eval_freq AND after minimum steps
+        if self.n_calls % self.eval_freq == 0 and self.n_calls >= 30000:
             # Log progress
             if len(self.rewards) > 0:
                 avg_reward = np.mean(self.rewards[-100:])
@@ -77,8 +82,7 @@ class ThinCloudMetricsCallback(BaseCallback):
                         print(f"   Current reward: {avg_reward:.4f}")
                         self.should_stop = True
                         return False  # Stop training
-                        
-            self.rewards.append(self.locals.get('rewards', [0])[0] if 'rewards' in self.locals else 0)
+        
         return True
 
 
@@ -280,8 +284,9 @@ def train_thin_cloud_detection(
         save_path=checkpoint_dir,
         name_prefix="thin_cloud"
     )
-    # Early stopping: patience=5 means if no improvement (>0.01) for 5 windows (25k steps), stop
-    metrics_callback = ThinCloudMetricsCallback(eval_freq=5000, patience=5, min_delta=0.01)
+    # Early stopping: patience=10 means if no improvement (>0.01) for 10 windows (50k steps), stop
+    # Also require at least 30k steps before early stopping can trigger
+    metrics_callback = ThinCloudMetricsCallback(eval_freq=5000, patience=10, min_delta=0.01)
     
     # Training loop with random scene sampling
     print(f"\n🚀 Training for {steps_per_session:,} steps...")
