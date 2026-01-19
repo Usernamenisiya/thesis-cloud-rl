@@ -57,8 +57,11 @@ for idx in range(min(len(test_images), 100)):  # Limit to 100 for speed
     with rasterio.open(test_masks[idx]) as src:
         gt = src.read(1)
     
+    # Binarize ground truth: any cloud = 1, no cloud = 0
+    gt_binary = (gt > 0).astype(np.uint8)
+    
     # Create environment
-    env = ThinCloudDetectionEnv(image, cnn_prob, gt, patch_size=64)
+    env = ThinCloudDetectionEnv(image, cnn_prob, gt_binary, patch_size=64)
     
     # Get predictions
     obs, _ = env.reset()
@@ -84,8 +87,8 @@ for idx in range(min(len(test_images), 100)):  # Limit to 100 for speed
         if done:
             break
     
-    # Collect metrics
-    all_gt.append(gt.flatten())
+    # Collect metrics (use binarized ground truth)
+    all_gt.append(gt_binary.flatten())
     all_pred_rl.append(predictions.flatten())
     all_pred_baseline.append(baseline.flatten())
     
