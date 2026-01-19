@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 import rasterio
 
 # Initialize the cloud detector
-cloud_detector = S2PixelCloudDetector(threshold=0.4, all_bands=False, average_over=4)
+# all_bands=True for CloudSEN12 which has 13 bands (all Sentinel-2 bands)
+cloud_detector = S2PixelCloudDetector(threshold=0.4, all_bands=True, average_over=4)
 
 def load_sentinel2_image(image_path):
     """
