@@ -47,7 +47,9 @@ rl_metrics = {'tp': 0, 'fp': 0, 'tn': 0, 'fn': 0}
 thin_baseline = {'tp': 0, 'fp': 0, 'fn': 0}
 thin_rl = {'tp': 0, 'fp': 0, 'fn': 0}
 
-num_samples = min(len(test_images), 100)
+# Use ALL test patches for final evaluation
+num_samples = len(test_images)
+print(f"   Evaluating on all {num_samples} test patches (this may take a while)...")
 
 # Debug: Track model actions
 all_threshold_deltas = []
