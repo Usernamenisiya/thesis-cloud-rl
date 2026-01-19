@@ -38,50 +38,22 @@ from rl_thin_cloud_environment import ThinCloudDetectionEnv
 
 
 class ThinCloudMetricsCallback(BaseCallback):
-    """Callback to track thin cloud detection performance with early stopping."""
+    """Callback to track thin cloud detection performance."""
     
-    def __init__(self, eval_freq=5000, patience=5, min_delta=0.01, verbose=1):
+    def __init__(self, eval_freq=5000, verbose=1):
         super().__init__(verbose)
         self.eval_freq = eval_freq
-        self.thin_cloud_ious = []
         self.rewards = []
-        self.reward_history = []  # Track rewards over windows
-        self.patience = patience  # Number of windows to wait
-        self.min_delta = min_delta  # Minimum improvement threshold
-        self.best_reward = -np.inf
-        self.patience_counter = 0
-        self.should_stop = False
         
     def _on_step(self):
         # Collect rewards
         if 'rewards' in self.locals:
             self.rewards.append(self.locals.get('rewards', [0])[0])
         
-        # Only check early stopping at eval_freq AND after minimum steps
-        if self.n_calls % self.eval_freq == 0 and self.n_calls >= 30000:
-            # Log progress
-            if len(self.rewards) > 0:
-                avg_reward = np.mean(self.rewards[-100:])
-                print(f"  Step {self.n_calls:,}: Avg reward = {avg_reward:.4f}")
-                self.reward_history.append(avg_reward)
-                
-                # Early stopping logic: check if improving
-                if len(self.reward_history) >= 2:
-                    if avg_reward > self.best_reward + self.min_delta:
-                        # Significant improvement
-                        self.best_reward = avg_reward
-                        self.patience_counter = 0
-                    else:
-                        # No improvement
-                        self.patience_counter += 1
-                        
-                    if self.patience_counter >= self.patience:
-                        print(f"\n⚠️  EARLY STOPPING triggered!")
-                        print(f"   No improvement for {self.patience} checkpoints ({self.patience * self.eval_freq:,} steps)")
-                        print(f"   Best reward: {self.best_reward:.4f}")
-                        print(f"   Current reward: {avg_reward:.4f}")
-                        self.should_stop = True
-                        return False  # Stop training
+        # Log progress every eval_freq steps
+        if self.n_calls % self.eval_freq == 0 and len(self.rewards) > 0:
+            avg_reward = np.mean(self.rewards[-100:])
+            print(f"  Step {self.n_calls:,}: Avg reward = {avg_reward:.4f}")
         
         return True
 
@@ -214,7 +186,7 @@ def evaluate_thin_cloud_performance(model, image_files, mask_files, num_samples=
 def train_thin_cloud_detection(
     image_files,
     mask_files,
-    steps_per_session=100000,
+    steps_per_session=240000,  # Train to 240k like the successful run
     checkpoint_dir="/content/drive/MyDrive/Colab_Data/checkpoints/thin_cloud",  # Save to Drive!
     model_dir="/content/drive/MyDrive/Colab_Data/models",  # Save to Drive!
     patches_per_epoch=100  # Limit episodes per scene as recommended
@@ -284,25 +256,17 @@ def train_thin_cloud_detection(
         save_path=checkpoint_dir,
         name_prefix="thin_cloud"
     )
-    # Early stopping: patience=10 means if no improvement (>0.01) for 10 windows (50k steps), stop
-    # Also require at least 30k steps before early stopping can trigger
-    metrics_callback = ThinCloudMetricsCallback(eval_freq=5000, patience=10, min_delta=0.01)
+    metrics_callback = ThinCloudMetricsCallback(eval_freq=5000)
     
     # Training loop with random scene sampling
     print(f"\n🚀 Training for {steps_per_session:,} steps...")
     print(f"   Using {len(image_files)} training scenes")
     print(f"   {patches_per_epoch} patches per scene max")
-    print(f"   Early stopping: patience={metrics_callback.patience}, min_delta={metrics_callback.min_delta}")
     
     total_steps = 0
     scene_count = 0
     
     while total_steps < steps_per_session:
-        # Check early stopping
-        if metrics_callback.should_stop:
-            print(f"\n🛑 Training stopped early at {total_steps:,}/{steps_per_session:,} steps")
-            break
-            
         # Sample random scene
         idx = np.random.randint(len(image_files))
         image = load_sentinel2_image(image_files[idx])
@@ -393,7 +357,7 @@ def main():
     model, thin_iou = train_thin_cloud_detection(
         train_images,
         train_masks,
-        steps_per_session=100000,
+        steps_per_session=240000,  # Match the successful 240k run
         checkpoint_dir=checkpoint_dir,
         model_dir=model_dir,
         patches_per_epoch=100  # As recommended: limit episodes per scene
