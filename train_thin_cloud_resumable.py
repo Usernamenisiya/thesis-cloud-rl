@@ -211,8 +211,8 @@ def train_thin_cloud_detection(
     image_files,
     mask_files,
     steps_per_session=100000,
-    checkpoint_dir="checkpoints/thin_cloud",
-    model_dir="models",
+    checkpoint_dir="/content/drive/MyDrive/Colab_Data/checkpoints/thin_cloud",  # Save to Drive!
+    model_dir="/content/drive/MyDrive/Colab_Data/models",  # Save to Drive!
     patches_per_epoch=100  # Limit episodes per scene as recommended
 ):
     """
@@ -378,11 +378,19 @@ def main():
     
     print(f"🎓 Training on {len(train_images)} images")
     
-    # Train
+    # Train - SAVE TO GOOGLE DRIVE so checkpoints persist!
+    checkpoint_dir = '/content/drive/MyDrive/Colab_Data/checkpoints/thin_cloud'
+    model_dir = '/content/drive/MyDrive/Colab_Data/models'
+    
+    print(f"\n💾 Checkpoints will be saved to: {checkpoint_dir}")
+    print(f"   (This persists across Colab sessions!)")
+    
     model, thin_iou = train_thin_cloud_detection(
         train_images,
         train_masks,
         steps_per_session=100000,
+        checkpoint_dir=checkpoint_dir,
+        model_dir=model_dir,
         patches_per_epoch=100  # As recommended: limit episodes per scene
     )
     
