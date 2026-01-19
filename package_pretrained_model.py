@@ -11,7 +11,7 @@ import glob
 import json
 from datetime import datetime
 
-# Find the best checkpoint (we know 220k or 240k was best)
+# Find the best checkpoint (240k steps - our best performing model)
 checkpoint_dir = 'checkpoints/thin_cloud'
 checkpoint_paths = sorted(glob.glob(f'{checkpoint_dir}/thin_cloud_*_steps.zip'))
 
@@ -19,9 +19,23 @@ if not checkpoint_paths:
     print("❌ No checkpoints found!")
     exit(1)
 
-# Use the latest checkpoint (240k steps)
-latest_checkpoint = checkpoint_paths[-1]
-print(f"📦 Packaging model from: {latest_checkpoint}")
+# Prefer 240k checkpoint (best performance based on evaluation)
+best_checkpoint = None
+for cp in checkpoint_paths:
+    if '240000' in cp:
+        best_checkpoint = cp
+        break
+
+# If 240k not found, use latest checkpoint >= 200k (peak performance range)
+if not best_checkpoint:
+    high_step_checkpoints = [cp for cp in checkpoint_paths if any(str(s) in cp for s in ['200000', '210000', '220000', '230000', '240000'])]
+    if high_step_checkpoints:
+        best_checkpoint = high_step_checkpoints[-1]
+    else:
+        best_checkpoint = checkpoint_paths[-1]
+        print(f"⚠️  Warning: Using {os.path.basename(best_checkpoint)} (240k checkpoint not found)")
+
+print(f"📦 Packaging model from: {best_checkpoint}")
 
 # Create pretrained model directory
 pretrained_dir = 'pretrained_models'
@@ -32,7 +46,7 @@ os.makedirs(model_dir, exist_ok=True)
 
 # Copy the checkpoint
 model_path = f'{model_dir}/model.zip'
-shutil.copy(latest_checkpoint, model_path)
+shutil.copy(best_checkpoint, model_path)
 print(f"✅ Model saved to: {model_path}")
 
 # Create model card with metadata
