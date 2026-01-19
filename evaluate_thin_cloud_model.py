@@ -13,20 +13,30 @@ from rl_thin_cloud_environment import ThinCloudDetectionEnv
 
 print("🔍 Looking for trained models...")
 
-# Find latest checkpoint
-checkpoint_paths = sorted(glob.glob('checkpoints/thin_cloud/thin_cloud_*_steps.zip'))
-model_paths = sorted(glob.glob('models/ppo_thin_cloud_*/model.zip'))
+# Find latest checkpoint - check multiple locations
+checkpoint_locations = [
+    '/content/drive/MyDrive/Colab_Data/checkpoints/thin_cloud/thin_cloud_*_steps.zip',
+    '/content/drive/MyDrive/Colab_Data/models/ppo_thin_cloud_*/model.zip',
+    'checkpoints/thin_cloud/thin_cloud_*_steps.zip',
+    'models/ppo_thin_cloud_*/model.zip'
+]
+
+checkpoint_paths = []
+for loc in checkpoint_locations:
+    found = sorted(glob.glob(loc))
+    if found:
+        checkpoint_paths = found
+        break
 
 if checkpoint_paths:
     model_path = checkpoint_paths[-1]
     print(f"✅ Loading checkpoint: {model_path}")
     model = PPO.load(model_path)
-elif model_paths:
-    model_path = model_paths[-1].replace('.zip', '')
-    print(f"✅ Loading model: {model_path}")
-    model = PPO.load(model_path)
 else:
     print("❌ No trained model found!")
+    print("   Tried:")
+    for loc in checkpoint_locations:
+        print(f"     - {loc}")
     exit(1)
 
 # Load test data
