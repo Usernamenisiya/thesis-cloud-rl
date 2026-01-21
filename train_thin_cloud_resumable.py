@@ -52,7 +52,6 @@ class ThinCloudMetricsCallback(BaseCallback):
             if len(self.rewards) > 0:
                 avg_reward = np.mean(self.rewards[-100:])
                 print(f"  Step {self.n_calls:,}: Avg reward = {avg_reward:.4f}")
-                        
             self.rewards.append(self.locals.get('rewards', [0])[0] if 'rewards' in self.locals else 0)
         return True
 
