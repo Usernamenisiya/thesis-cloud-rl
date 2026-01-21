@@ -40,19 +40,29 @@ from rl_thin_cloud_environment import ThinCloudDetectionEnv
 class ThinCloudMetricsCallback(BaseCallback):
     """Callback to track thin cloud detection performance."""
     
-    def __init__(self, eval_freq=5000, verbose=1):
+    def __init__(self, eval_freq=5000, max_steps=100000, verbose=1):
         super().__init__(verbose)
         self.eval_freq = eval_freq
+        self.max_steps = max_steps
+        self.session_steps = 0  # Track steps in THIS session only
         self.thin_cloud_ious = []
         self.rewards = []
         
     def _on_step(self):
-        if self.n_calls % self.eval_freq == 0:
+        self.session_steps += 1
+        
+        if self.session_steps % self.eval_freq == 0:
             # Log progress
             if len(self.rewards) > 0:
                 avg_reward = np.mean(self.rewards[-100:])
-                print(f"  Step {self.n_calls:,}: Avg reward = {avg_reward:.4f}")
+                print(f"  Step {self.session_steps:,}/{self.max_steps:,}: Avg reward = {avg_reward:.4f}", flush=True)
             self.rewards.append(self.locals.get('rewards', [0])[0] if 'rewards' in self.locals else 0)
+        
+        # Stop if we've reached max steps for this session
+        if self.session_steps >= self.max_steps:
+            print(f"\n✅ Reached {self.max_steps:,} steps - stopping training", flush=True)
+            return False  # Stop training
+        
         return True
 
 
@@ -254,7 +264,7 @@ def train_thin_cloud_detection(
         save_path=checkpoint_dir,
         name_prefix="thin_cloud"
     )
-    metrics_callback = ThinCloudMetricsCallback(eval_freq=5000)
+    metrics_callback = ThinCloudMetricsCallback(eval_freq=5000, max_steps=steps_per_session)
     
     # Training loop with random scene sampling
     print(f"\n🚀 Training for {steps_per_session:,} steps...")
@@ -263,8 +273,9 @@ def train_thin_cloud_detection(
     
     total_steps = 0
     scene_count = 0
+    training_stopped = False
     
-    while total_steps < steps_per_session:
+    while total_steps < steps_per_session and not training_stopped:
         # Sample random scene
         idx = np.random.randint(len(image_files))
         image = load_sentinel2_image(image_files[idx])
@@ -292,14 +303,26 @@ def train_thin_cloud_detection(
         total_steps += steps_this_scene
         scene_count += 1
         
+        # Check if callback stopped training
+        if metrics_callback.session_steps >= steps_per_session:
+            training_stopped = True
+            print(f"  Training stopped by callback at {total_steps:,} steps", flush=True)
+            break
+        
         if scene_count % 20 == 0:
-            print(f"  Processed {scene_count} scenes, {total_steps:,} total steps")
+            print(f"  Processed {scene_count} scenes, {total_steps:,} total steps", flush=True)
     
     # Final save
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
     final_path = f"{model_dir}/ppo_thin_cloud_{timestamp}"
     model.save(f"{final_path}/model")
     print(f"\n💾 Model saved to: {final_path}")
+    
+    # Also save to Drive for persistence
+    drive_path = "/content/drive/MyDrive/Colab_Data/thin_cloud_final"
+    os.makedirs(drive_path, exist_ok=True)
+    model.save(f"{drive_path}/model")
+    print(f"💾 Model also saved to: {drive_path}")
     
     # Evaluate
     thin_iou = evaluate_thin_cloud_performance(model, image_files, mask_files)

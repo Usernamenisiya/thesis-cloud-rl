@@ -225,16 +225,16 @@ class ThinCloudDetectionEnv(gym.Env):
     
     def _compute_reward(self, final_pred, i, j):
         """
-        Compute reward = IoU IMPROVEMENT on THIN CLOUDS ONLY.
-        
-        This is exactly what your friend recommended!
+        Multi-objective reward:
+        - 70% weight on thin cloud improvement
+        - 30% weight on overall F1 improvement
+        - Penalty for precision loss (prevent over-detection)
         """
         ps = self.patch_size
         
         # Ground truth for this patch
         gt_patch = (self.ground_truth[i:i+ps, j:j+ps] > 0).astype(np.uint8)
         thin_gt_patch = self.thin_clouds_gt[i:i+ps, j:j+ps]
-        thick_gt_patch = self.thick_clouds_gt[i:i+ps, j:j+ps]
         
         # Baseline prediction
         baseline_pred = (self.cnn_prob[i:i+ps, j:j+ps] > self.baseline_threshold).astype(np.uint8)
@@ -245,45 +245,43 @@ class ThinCloudDetectionEnv(gym.Env):
         baseline_flat = baseline_pred.flatten()
         thin_gt_flat = thin_gt_patch.flatten()
         
-        # ============================================================
-        # REWARD = IoU IMPROVEMENT ON THIN CLOUDS ONLY (key recommendation)
-        # ============================================================
-        if thin_gt_flat.sum() > 0:
-            # This patch has thin clouds - compute IoU specifically for thin clouds
-            baseline_thin_iou = jaccard_score(thin_gt_flat, baseline_flat, zero_division=0)
-            adjusted_thin_iou = jaccard_score(thin_gt_flat, pred_flat, zero_division=0)
-            
-            # Reward = improvement in thin cloud IoU
-            thin_iou_improvement = adjusted_thin_iou - baseline_thin_iou
-            reward = thin_iou_improvement * 10.0  # Scale for learning
-            
-            # Bonus for significant thin cloud detection
-            if adjusted_thin_iou > 0.3:
-                reward += 1.0
-            if adjusted_thin_iou > 0.5:
-                reward += 2.0
-        else:
-            # No thin clouds in this patch - small reward for maintaining overall IoU
-            if gt_flat.sum() > 0:
-                baseline_iou = jaccard_score(gt_flat, baseline_flat, zero_division=0)
-                adjusted_iou = jaccard_score(gt_flat, pred_flat, zero_division=0)
-                reward = (adjusted_iou - baseline_iou) * 2.0  # Smaller weight
-            else:
-                # No clouds at all - reward for not false positiving
-                false_positives = pred_flat.sum()
-                reward = -0.1 * (false_positives / pred_flat.size) if false_positives > 0 else 0.1
+        reward = 0.0
         
         # ============================================================
-        # PENALTY: Don't hurt thick cloud detection
+        # COMPONENT 1: Thin cloud IoU improvement (70% weight)
         # ============================================================
-        if thick_gt_patch.sum() > 0:
-            thick_gt_flat = thick_gt_patch.flatten()
-            thick_recall_baseline = np.logical_and(baseline_flat, thick_gt_flat).sum() / thick_gt_flat.sum()
-            thick_recall_adjusted = np.logical_and(pred_flat, thick_gt_flat).sum() / thick_gt_flat.sum()
+        if thin_gt_flat.sum() > 0:
+            baseline_thin_iou = jaccard_score(thin_gt_flat, baseline_flat, zero_division=0)
+            adjusted_thin_iou = jaccard_score(thin_gt_flat, pred_flat, zero_division=0)
+            thin_improvement = adjusted_thin_iou - baseline_thin_iou
+            reward += 0.7 * thin_improvement * 10.0
+        
+        # ============================================================
+        # COMPONENT 2: Overall F1 improvement (30% weight)
+        # ============================================================
+        if gt_flat.sum() > 0:
+            baseline_f1 = f1_score(gt_flat, baseline_flat, zero_division=0)
+            adjusted_f1 = f1_score(gt_flat, pred_flat, zero_division=0)
+            f1_improvement = adjusted_f1 - baseline_f1
+            reward += 0.3 * f1_improvement * 10.0
+        
+        # ============================================================
+        # PENALTY: Precision loss (prevent over-detection)
+        # ============================================================
+        if pred_flat.sum() > 0:
+            baseline_precision = precision_score(gt_flat, baseline_flat, zero_division=1)
+            adjusted_precision = precision_score(gt_flat, pred_flat, zero_division=1)
+            precision_loss = baseline_precision - adjusted_precision
             
-            if thick_recall_adjusted < thick_recall_baseline - 0.1:
-                # Penalize if we're hurting thick cloud detection
-                reward -= 2.0
+            if precision_loss > 0.1:  # Lost more than 10% precision
+                reward -= precision_loss * 5.0  # Strong penalty
+        
+        # ============================================================
+        # PENALTY: False positives on clear sky
+        # ============================================================
+        if gt_flat.sum() == 0 and pred_flat.sum() > 0:
+            false_positive_rate = pred_flat.sum() / pred_flat.size
+            reward -= false_positive_rate * 3.0
         
         return reward
     
