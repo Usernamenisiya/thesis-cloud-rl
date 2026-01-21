@@ -187,7 +187,7 @@ def train_thin_cloud_detection(
     image_files,
     mask_files,
     steps_per_session=100000,
-    checkpoint_dir="checkpoints/thin_cloud",
+    checkpoint_dir="/content/drive/MyDrive/Colab_Data/thin_cloud_multiobj",  # Save directly to Drive!
     model_dir="models",
     patches_per_epoch=100  # Limit episodes per scene as recommended
 ):
