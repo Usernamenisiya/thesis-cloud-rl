@@ -179,7 +179,8 @@ def create_false_color(patch):
 
 def visualize_comparison(patches, labels, cnn_masks, ppo_masks, dqn_masks, 
                         num_samples=5, save_path=None):
-    """Create side-by-side comparison visualization."""
+    """Create side-by-side comparison visualization with TP/FN/FP overlays."""
+    from sklearn.metrics import f1_score
     
     fig, axes = plt.subplots(num_samples, 6, figsize=(24, 4*num_samples))
     
@@ -187,67 +188,91 @@ def visualize_comparison(patches, labels, cnn_masks, ppo_masks, dqn_masks,
         axes = axes.reshape(1, -1)
     
     for i in range(num_samples):
-        # RGB Image
+        # Prepare ground truth (binary: any cloud = 1)
+        gt_binary = (labels[i] > 0).astype(np.uint8)
+        thin_cloud_mask = (labels[i] == 2)  # Thin clouds only
+        
+        # Column 1: RGB Image
         rgb = create_rgb_image(patches[i])
         axes[i, 0].imshow(rgb)
-        axes[i, 0].set_title('RGB Image' if i == 0 else '', fontsize=12)
+        axes[i, 0].set_title(f'Patch #{i+1}\nRGB Image', fontsize=12, fontweight='bold')
         axes[i, 0].axis('off')
         
-        # False Color
-        false_color = create_false_color(patches[i])
-        axes[i, 1].imshow(false_color)
-        axes[i, 1].set_title('False Color (NIR-R-G)' if i == 0 else '', fontsize=12)
+        # Column 2: Ground Truth with thin clouds highlighted
+        gt_display = np.zeros((*labels[i].shape, 3))
+        gt_display[:, :, 0] = gt_binary  # All clouds in red
+        gt_display[:, :, 1] = thin_cloud_mask  # Thin clouds also in green (makes yellow)
+        axes[i, 1].imshow(gt_display)
+        thin_pct = thin_cloud_mask.sum() / max(gt_binary.sum(), 1) * 100
+        axes[i, 1].set_title(f'Ground Truth\nThin clouds: {thin_pct:.1f}% (yellow)', fontsize=11)
         axes[i, 1].axis('off')
         
-        # Ground Truth
-        gt_display = np.zeros((*labels[i].shape, 3))
-        gt_display[labels[i] == 0] = [0.2, 0.2, 0.2]  # Clear - dark gray
-        gt_display[labels[i] == 1] = [1.0, 1.0, 1.0]  # Thick cloud - white
-        gt_display[labels[i] == 2] = [0.7, 0.9, 1.0]  # Thin cloud - light blue
-        gt_display[labels[i] == 3] = [0.4, 0.2, 0.0]  # Shadow - brown
+        # Column 3: CNN Baseline with TP/FN/FP overlay
+        cnn_overlay = np.zeros((*gt_binary.shape, 3))
+        cnn_overlay[:, :, 1] = (cnn_masks[i] == 1) & (gt_binary == 1)  # TP green
+        cnn_overlay[:, :, 0] = (cnn_masks[i] == 0) & (gt_binary == 1)  # FN red
+        cnn_overlay[:, :, 2] = (cnn_masks[i] == 1) & (gt_binary == 0)  # FP blue
         
-        axes[i, 2].imshow(gt_display)
-        axes[i, 2].set_title('Ground Truth' if i == 0 else '', fontsize=12)
+        axes[i, 2].imshow(cnn_overlay)
+        cnn_f1 = f1_score(gt_binary.flatten(), cnn_masks[i].flatten(), zero_division=0)
+        cnn_thin_recall = np.sum((cnn_masks[i] == 1) & thin_cloud_mask) / max(thin_cloud_mask.sum(), 1)
+        axes[i, 2].set_title(f'CNN Baseline\nThin Recall: {cnn_thin_recall*100:.1f}%\nF1: {cnn_f1:.3f}', fontsize=11)
         axes[i, 2].axis('off')
         
-        # CNN Baseline
-        cnn_display = np.zeros((*cnn_masks[i].shape, 3))
-        cnn_display[cnn_masks[i] == 0] = [0.2, 0.2, 0.2]
-        cnn_display[cnn_masks[i] == 1] = [1.0, 1.0, 1.0]
+        # Column 4: PPO with TP/FN/FP overlay
+        ppo_overlay = np.zeros((*gt_binary.shape, 3))
+        ppo_overlay[:, :, 1] = (ppo_masks[i] == 1) & (gt_binary == 1)  # TP green
+        ppo_overlay[:, :, 0] = (ppo_masks[i] == 0) & (gt_binary == 1)  # FN red
+        ppo_overlay[:, :, 2] = (ppo_masks[i] == 1) & (gt_binary == 0)  # FP blue
         
-        axes[i, 3].imshow(cnn_display)
-        axes[i, 3].set_title('CNN Baseline' if i == 0 else '', fontsize=12)
+        axes[i, 3].imshow(ppo_overlay)
+        ppo_f1 = f1_score(gt_binary.flatten(), ppo_masks[i].flatten(), zero_division=0)
+        ppo_thin_recall = np.sum((ppo_masks[i] == 1) & thin_cloud_mask) / max(thin_cloud_mask.sum(), 1)
+        axes[i, 3].set_title(f'PPO\nThin Recall: {ppo_thin_recall*100:.1f}%\nF1: {ppo_f1:.3f}', fontsize=11)
         axes[i, 3].axis('off')
         
-        # PPO
-        ppo_display = np.zeros((*ppo_masks[i].shape, 3))
-        ppo_display[ppo_masks[i] == 0] = [0.2, 0.2, 0.2]
-        ppo_display[ppo_masks[i] == 1] = [1.0, 1.0, 1.0]
+        # Column 5: DQN with TP/FN/FP overlay
+        dqn_overlay = np.zeros((*gt_binary.shape, 3))
+        dqn_overlay[:, :, 1] = (dqn_masks[i] == 1) & (gt_binary == 1)  # TP green
+        dqn_overlay[:, :, 0] = (dqn_masks[i] == 0) & (gt_binary == 1)  # FN red
+        dqn_overlay[:, :, 2] = (dqn_masks[i] == 1) & (gt_binary == 0)  # FP blue
         
-        axes[i, 4].imshow(ppo_display)
-        axes[i, 4].set_title('PPO' if i == 0 else '', fontsize=12)
+        axes[i, 4].imshow(dqn_overlay)
+        dqn_f1 = f1_score(gt_binary.flatten(), dqn_masks[i].flatten(), zero_division=0)
+        dqn_thin_recall = np.sum((dqn_masks[i] == 1) & thin_cloud_mask) / max(thin_cloud_mask.sum(), 1)
+        axes[i, 4].set_title(f'DQN\nThin Recall: {dqn_thin_recall*100:.1f}%\nF1: {dqn_f1:.3f}', fontsize=11)
         axes[i, 4].axis('off')
         
-        # DQN
-        dqn_display = np.zeros((*dqn_masks[i].shape, 3))
-        dqn_display[dqn_masks[i] == 0] = [0.2, 0.2, 0.2]
-        dqn_display[dqn_masks[i] == 1] = [1.0, 1.0, 1.0]
+        # Column 6: Improvement visualization (DQN vs CNN)
+        improvement_vis = np.zeros((*gt_binary.shape, 3))
+        # Green: DQN fixed (CNN missed, DQN caught)
+        improvement_vis[:, :, 1] = (dqn_masks[i] == 1) & (cnn_masks[i] == 0) & (gt_binary == 1)
+        # Red: DQN lost (CNN caught, DQN missed)
+        improvement_vis[:, :, 0] = (dqn_masks[i] == 0) & (cnn_masks[i] == 1) & (gt_binary == 1)
+        # Cyan: Thin clouds that DQN improved
+        thin_improved = thin_cloud_mask & (dqn_masks[i] == 1) & (cnn_masks[i] == 0)
+        improvement_vis[:, :, 2] = thin_improved.astype(float)
+        improvement_vis[:, :, 1] = np.maximum(improvement_vis[:, :, 1], thin_improved.astype(float))
         
-        axes[i, 5].imshow(dqn_display)
-        axes[i, 5].set_title('DQN' if i == 0 else '', fontsize=12)
+        axes[i, 5].imshow(improvement_vis)
+        improvement = dqn_thin_recall - cnn_thin_recall
+        axes[i, 5].set_title(f'DQN Improvement\n{improvement*100:+.1f}% thin recall\nGreen=Fixed, Red=Lost', fontsize=11)
         axes[i, 5].axis('off')
     
     # Add legend
     legend_elements = [
-        mpatches.Patch(color=[0.2, 0.2, 0.2], label='Clear/No Cloud'),
-        mpatches.Patch(color=[1.0, 1.0, 1.0], label='Cloud (Thick or Thin)'),
-        mpatches.Patch(color=[0.7, 0.9, 1.0], label='Thin Cloud (GT only)'),
-        mpatches.Patch(color=[0.4, 0.2, 0.0], label='Shadow (GT only)')
+        mpatches.Patch(color=[0, 1, 0], label='True Positive (TP)'),
+        mpatches.Patch(color=[1, 0, 0], label='False Negative (FN)'),
+        mpatches.Patch(color=[0, 0, 1], label='False Positive (FP)'),
+        mpatches.Patch(color=[1, 1, 0], label='Thin Cloud (GT)'),
+        mpatches.Patch(color=[0, 1, 1], label='Thin Cloud Fixed'),
     ]
     fig.legend(handles=legend_elements, loc='upper center', 
-               bbox_to_anchor=(0.5, 0.02), ncol=4, fontsize=11)
+               bbox_to_anchor=(0.5, 0.02), ncol=5, fontsize=11)
     
-    plt.tight_layout(rect=[0, 0.01, 1, 1])
+    plt.suptitle('🚀 Algorithm Comparison: CNN Baseline vs PPO vs DQN\n(Green=TP, Red=FN, Blue=FP)', 
+                 fontsize=16, fontweight='bold', y=1.02)
+    plt.tight_layout(rect=[0, 0.03, 1, 0.98])
     
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
