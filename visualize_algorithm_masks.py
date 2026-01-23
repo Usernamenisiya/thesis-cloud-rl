@@ -24,31 +24,37 @@ from rl_thin_cloud_environment_discrete import ThinCloudDetectionEnvDiscrete
 
 
 def load_test_data():
-    """Load test patches from zarr data."""
+    """Load test patches from TIF files."""
     print("Loading test data...")
     
-    if IN_COLAB:
-        data_path = Path('/content/data')
-    else:
-        data_path = Path('data')
+    import glob
+    import rasterio
     
-    # Load measurements and labels
-    import zarr
-    measurements_path = data_path / 'sentinel2_zarr' / 'measurements'
-    conditions_path = data_path / 'sentinel2_zarr' / 'conditions'
+    # Load from processed TIF files on Drive
+    data_dir = '/content/drive/MyDrive/Colab_Data/cloudsen12_processed_1000'
+    image_files = sorted(glob.glob(f'{data_dir}/*_image.tif'))
+    mask_files = sorted(glob.glob(f'{data_dir}/*_mask.tif'))
     
-    measurements = zarr.open(str(measurements_path), mode='r')
-    conditions = zarr.open(str(conditions_path), mode='r')
+    # Use test set (last 200 patches, indices 800-999)
+    split_idx = int(0.8 * len(image_files))
+    test_images = image_files[split_idx:]
+    test_masks = mask_files[split_idx:]
     
-    # Get test set (patches 800-999)
-    test_indices = range(800, 1000)
+    print(f"Found {len(test_images)} test images")
     
     patches = []
     labels = []
     
-    for idx in test_indices:
-        patch = measurements[idx]
-        label = conditions[idx]
+    for img_path, mask_path in zip(test_images, test_masks):
+        # Load image
+        with rasterio.open(img_path) as src:
+            patch = src.read()  # (bands, H, W)
+            patch = np.transpose(patch, (1, 2, 0))  # (H, W, bands)
+        
+        # Load mask
+        with rasterio.open(mask_path) as src:
+            label = src.read(1)  # (H, W)
+        
         patches.append(patch)
         labels.append(label)
     
