@@ -12,8 +12,7 @@ IN_COLAB = ('google.colab' in sys.modules or
             'COLAB_GPU' in os.environ)
 
 if IN_COLAB:
-    from google.colab import drive
-    drive.mount('/content/drive', force_remount=False)
+    # Drive should already be mounted from notebook cells
     BASE_DIR = Path('/content/drive/MyDrive/Colab_Data')
 else:
     BASE_DIR = Path('.')
