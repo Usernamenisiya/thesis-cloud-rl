@@ -88,24 +88,67 @@ def apply_ppo_model(patch, model, cnn_prob, label):
     """Apply PPO model to get cloud mask."""
     gt_binary = (label > 0).astype(np.uint8)
     env = ThinCloudDetectionEnv(patch, cnn_prob, gt_binary)
+    
+    # Collect predictions for all patches
+    prediction = np.zeros_like(cnn_prob, dtype=np.uint8)
+    ps = env.patch_size
+    
     obs, _ = env.reset()
+    done = False
     
-    action, _ = model.predict(obs, deterministic=True)
-    obs, reward, done, truncated, info = env.step(action)
+    while not done:
+        action, _ = model.predict(obs, deterministic=True)
+        
+        # Apply action to current patch
+        i, j = env.current_pos
+        threshold_delta = np.clip(action[0], -0.2, 0.2)
+        thin_boost = np.clip(action[1], 0.0, 0.3)
+        
+        cnn_patch = cnn_prob[i:i+ps, j:j+ps].copy()
+        thin_indicator = env.thin_cloud_indicator[i:i+ps, j:j+ps]
+        
+        boosted_prob = np.clip(cnn_patch + thin_indicator * thin_boost, 0, 1)
+        prediction[i:i+ps, j:j+ps] = (boosted_prob > (0.5 + threshold_delta)).astype(np.uint8)
+        
+        obs, reward, done, truncated, info = env.step(action)
+        done = done or truncated
     
-    return env.current_prediction
+    return prediction
 
 
 def apply_dqn_model(patch, model, cnn_prob, label):
     """Apply DQN model to get cloud mask."""
     gt_binary = (label > 0).astype(np.uint8)
     env = ThinCloudDetectionEnvDiscrete(patch, cnn_prob, gt_binary)
+    
+    # Collect predictions for all patches
+    prediction = np.zeros_like(cnn_prob, dtype=np.uint8)
+    ps = env.patch_size
+    
     obs, _ = env.reset()
+    done = False
     
-    action, _ = model.predict(obs, deterministic=True)
-    obs, reward, done, truncated, info = env.step(action)
+    while not done:
+        action, _ = model.predict(obs, deterministic=True)
+        
+        # Decode discrete action
+        threshold_idx = action // 3
+        boost_idx = action % 3
+        threshold_delta = env.THRESHOLD_OPTIONS[threshold_idx]
+        thin_boost = env.BOOST_OPTIONS[boost_idx]
+        
+        # Apply action to current patch
+        i, j = env.current_pos
+        cnn_patch = cnn_prob[i:i+ps, j:j+ps].copy()
+        thin_indicator = env.thin_cloud_indicator[i:i+ps, j:j+ps]
+        
+        boosted_prob = np.clip(cnn_patch + thin_indicator * thin_boost, 0, 1)
+        prediction[i:i+ps, j:j+ps] = (boosted_prob > (0.5 + threshold_delta)).astype(np.uint8)
+        
+        obs, reward, done, truncated, info = env.step(action)
+        done = done or truncated
     
-    return env.current_prediction
+    return prediction
 
 
 def create_rgb_image(patch):
