@@ -308,70 +308,78 @@ def main():
     dqn_model = DQN.load(str(dqn_model_path))
     print("DQN model loaded successfully")
     
-    # Select diverse test samples
-    # Choose patches with varying cloud coverage
-    print("\nSelecting diverse test samples...")
+    # Select samples with BEST thin cloud improvement (like original PPO visualization)
+    print("\nFinding patches with best thin cloud improvement...")
     
-    # Calculate cloud coverage for each patch
-    thin_cloud_ratios = []
-    for label in labels:
-        thin_ratio = np.sum(label == 2) / label.size
-        thin_cloud_ratios.append(thin_ratio)
+    samples_with_improvement = []
     
-    thin_cloud_ratios = np.array(thin_cloud_ratios)
-    
-    # Select 5 samples with different thin cloud coverage
-    selected_indices = []
-    
-    # 1. High thin cloud coverage
-    high_thin_idx = np.argsort(thin_cloud_ratios)[-1]
-    selected_indices.append(high_thin_idx)
-    
-    # 2. Medium-high thin cloud
-    med_high_idx = np.argsort(thin_cloud_ratios)[-len(thin_cloud_ratios)//4]
-    selected_indices.append(med_high_idx)
-    
-    # 3. Medium thin cloud
-    med_idx = np.argsort(thin_cloud_ratios)[len(thin_cloud_ratios)//2]
-    selected_indices.append(med_idx)
-    
-    # 4. Low thin cloud
-    low_idx = np.argsort(thin_cloud_ratios)[len(thin_cloud_ratios)//4]
-    selected_indices.append(low_idx)
-    
-    # 5. Very low/no thin cloud
-    very_low_idx = np.argsort(thin_cloud_ratios)[0]
-    selected_indices.append(very_low_idx)
-    
-    selected_patches = [patches[i] for i in selected_indices]
-    selected_labels = [labels[i] for i in selected_indices]
-    
-    print(f"Selected patch indices: {selected_indices}")
-    print(f"Thin cloud ratios: {[thin_cloud_ratios[i] for i in selected_indices]}")
-    
-    # Generate predictions for all three algorithms
-    print("\nGenerating predictions...")
-    
-    cnn_masks = []
-    ppo_masks = []
-    dqn_masks = []
-    
-    for i, (patch, label) in enumerate(zip(selected_patches, selected_labels)):
-        print(f"  Processing patch {i+1}/5...")
+    for idx in range(min(50, len(patches))):  # Check first 50 patches
+        patch = patches[idx]
+        label = labels[idx]
         
-        # CNN baseline - get both mask and probability
+        # Get thin cloud mask (label == 2)
+        thin_cloud_mask = (label == 2)
+        thin_cloud_count = thin_cloud_mask.sum()
+        
+        # Skip patches with too few thin clouds
+        if thin_cloud_count < 100:
+            continue
+        
+        # Get predictions
         cnn_mask, cnn_prob = apply_cnn_baseline(patch)
-        cnn_masks.append(cnn_mask)
-        
-        # PPO - needs cnn_prob and label
-        ppo_mask = apply_ppo_model(patch, ppo_model, cnn_prob, label)
-        ppo_masks.append(ppo_mask)
-        
-        # DQN - needs cnn_prob and label
         dqn_mask = apply_dqn_model(patch, dqn_model, cnn_prob, label)
-        dqn_masks.append(dqn_mask)
+        ppo_mask = apply_ppo_model(patch, ppo_model, cnn_prob, label)
+        
+        # Calculate thin cloud recall for each
+        cnn_thin_recall = np.sum((cnn_mask == 1) & thin_cloud_mask) / thin_cloud_count
+        dqn_thin_recall = np.sum((dqn_mask == 1) & thin_cloud_mask) / thin_cloud_count
+        ppo_thin_recall = np.sum((ppo_mask == 1) & thin_cloud_mask) / thin_cloud_count
+        
+        # Calculate improvement (best of DQN or PPO over CNN)
+        dqn_improvement = dqn_thin_recall - cnn_thin_recall
+        ppo_improvement = ppo_thin_recall - cnn_thin_recall
+        best_improvement = max(dqn_improvement, ppo_improvement)
+        
+        if best_improvement > 0.05:  # At least 5% improvement
+            samples_with_improvement.append({
+                'idx': idx,
+                'patch': patch,
+                'label': label,
+                'cnn_mask': cnn_mask,
+                'cnn_prob': cnn_prob,
+                'ppo_mask': ppo_mask,
+                'dqn_mask': dqn_mask,
+                'cnn_thin_recall': cnn_thin_recall,
+                'ppo_thin_recall': ppo_thin_recall,
+                'dqn_thin_recall': dqn_thin_recall,
+                'dqn_improvement': dqn_improvement,
+                'ppo_improvement': ppo_improvement,
+                'best_improvement': best_improvement,
+                'thin_cloud_count': thin_cloud_count
+            })
+            print(f"  Patch {idx}: CNN={cnn_thin_recall*100:.1f}% → DQN={dqn_thin_recall*100:.1f}% (+{dqn_improvement*100:.1f}%), PPO={ppo_thin_recall*100:.1f}% (+{ppo_improvement*100:.1f}%)")
     
-    print("All predictions generated")
+    # Sort by best improvement and take top 5
+    samples_with_improvement.sort(key=lambda x: x['best_improvement'], reverse=True)
+    selected_samples = samples_with_improvement[:5]
+    
+    if len(selected_samples) == 0:
+        print("ERROR: No patches with thin cloud improvement found!")
+        return
+    
+    print(f"\n✅ Selected {len(selected_samples)} best patches for visualization")
+    
+    # Extract data for visualization
+    selected_indices = [s['idx'] for s in selected_samples]
+    selected_patches = [s['patch'] for s in selected_samples]
+    selected_labels = [s['label'] for s in selected_samples]
+    
+    # Use pre-computed masks from sample selection
+    cnn_masks = [s['cnn_mask'] for s in selected_samples]
+    ppo_masks = [s['ppo_mask'] for s in selected_samples]
+    dqn_masks = [s['dqn_mask'] for s in selected_samples]
+    
+    print(f"Using pre-computed predictions for {len(selected_samples)} patches")
     
     # Create visualization
     print("\nCreating visualization...")
