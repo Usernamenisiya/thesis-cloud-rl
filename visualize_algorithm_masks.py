@@ -62,25 +62,24 @@ def load_test_data():
 
 
 def apply_cnn_baseline(patch):
-    """Apply CNN baseline threshold detection."""
-    # Normalize bands
-    bands_mean = np.array([1353.3418, 1265.7446, 1269.3455, 1404.6283, 
-                           2033.6624, 2583.3354, 2743.1646, 2895.0786, 
-                           2927.9084, 747.4245, 16.481863, 2383.0974])
-    bands_std = np.array([72.612915, 156.40573, 240.63678, 373.3985, 
-                          563.72205, 722.8531, 846.32776, 975.0849, 
-                          1084.3259, 314.12592, 21.04352, 833.8011])
+    """Apply CNN baseline threshold detection using s2cloudless."""
+    from s2cloudless import S2PixelCloudDetector
     
-    normalized_patch = (patch - bands_mean) / bands_std
+    # s2cloudless expects normalized reflectance in [0, 1]
+    if patch.max() > 1.0:
+        patch_normalized = patch / 10000.0
+    else:
+        patch_normalized = patch
     
-    # CNN-like thresholds based on spectral features
-    b3 = normalized_patch[:, :, 2]  # Green
-    b8 = normalized_patch[:, :, 7]  # NIR
-    b11 = normalized_patch[:, :, 10]  # SWIR
+    # Initialize cloud detector
+    cloud_detector = S2PixelCloudDetector(threshold=0.4, all_bands=True, average_over=4)
     
-    # Cloud detection threshold
-    cloud_score = (b3 + b8 - b11) / 3.0
-    cloud_mask = (cloud_score > 0.15).astype(np.uint8)
+    # s2cloudless expects (batch, H, W, bands)
+    patch_batched = patch_normalized[np.newaxis, ...]
+    cloud_prob = cloud_detector.get_cloud_probability_maps(patch_batched)
+    
+    # Threshold at 0.5 for binary mask
+    cloud_mask = (cloud_prob[0] > 0.5).astype(np.uint8)
     
     return cloud_mask
 
