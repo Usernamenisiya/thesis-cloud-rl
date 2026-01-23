@@ -238,13 +238,20 @@ def train():
     model.save(final_path)
     print(f"\n💾 Saved final model: {final_path}.zip")
     
+    # Calculate mean reward from episode info buffer
+    mean_reward = 0.0
+    if model.ep_info_buffer:
+        rewards = [ep['r'] for ep in model.ep_info_buffer if 'r' in ep]
+        if rewards:
+            mean_reward = float(np.mean(rewards))
+    
     # Save progress
     session_info = {
         'session': datetime.now().isoformat(),
         'steps': TOTAL_TIMESTEPS,
         'total_steps': final_steps,
         'duration_seconds': duration,
-        'mean_reward': float(np.mean(model.ep_info_buffer) if model.ep_info_buffer else 0)
+        'mean_reward': mean_reward
     }
     progress = save_progress(final_steps, session_info)
     
