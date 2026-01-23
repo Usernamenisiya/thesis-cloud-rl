@@ -168,25 +168,40 @@ def train():
         )
     
     # Custom callback to rotate through training images
+    # For DQN, we handle environment rotation more carefully
     class RotateEnvCallback(BaseCallback):
-        def __init__(self, train_images, train_masks, rotate_freq=500):
+        def __init__(self, train_images, train_masks, rotate_freq=100):
             super().__init__()
             self.train_images = train_images
             self.train_masks = train_masks
             self.rotate_freq = rotate_freq
             self.episode_count = 0
+            self.last_rotation = 0
             
         def _on_step(self):
             # Check if episode ended
             if self.locals.get('dones', [False])[0]:
                 self.episode_count += 1
                 
-                if self.episode_count % self.rotate_freq == 0:
-                    # Create new environment with different image
-                    idx = np.random.randint(len(self.train_images))
-                    new_env = create_env(self.train_images[idx], self.train_masks[idx])
-                    self.model.set_env(new_env)
-                    print(f"   🔄 Rotated to image {idx}")
+                # Only rotate after a number of episodes, not during training
+                if self.episode_count - self.last_rotation >= self.rotate_freq:
+                    try:
+                        # Create new environment with different image
+                        idx = np.random.randint(len(self.train_images))
+                        new_env = create_env(self.train_images[idx], self.train_masks[idx])
+                        
+                        # For DQN, we need to wrap and reset properly
+                        from stable_baselines3.common.vec_env import DummyVecEnv
+                        from stable_baselines3.common.monitor import Monitor
+                        
+                        wrapped_env = DummyVecEnv([lambda: Monitor(new_env)])
+                        self.model.set_env(wrapped_env)
+                        self.model._last_obs = wrapped_env.reset()
+                        
+                        self.last_rotation = self.episode_count
+                        print(f"   🔄 Rotated to image {idx} (episode {self.episode_count})")
+                    except Exception as e:
+                        print(f"   ⚠️ Rotation failed: {e}")
             return True
     
     # Checkpoint callback
@@ -197,8 +212,8 @@ def train():
         save_vecnormalize=True
     )
     
-    # Rotate env callback
-    rotate_callback = RotateEnvCallback(train_images, train_masks, rotate_freq=10)
+    # Rotate env callback - rotate every 100 episodes
+    rotate_callback = RotateEnvCallback(train_images, train_masks, rotate_freq=100)
     
     # Train
     print(f"\n🚀 Training for {TOTAL_TIMESTEPS:,} timesteps...")
