@@ -20,8 +20,12 @@ import numpy as np
 from pathlib import Path
 from datetime import datetime
 
-# Check if running in Colab
-IN_COLAB = 'google.colab' in sys.modules
+# Check if running in Colab (multiple detection methods)
+IN_COLAB = (
+    'google.colab' in sys.modules or 
+    os.path.exists('/content') or
+    'COLAB_GPU' in os.environ
+)
 
 if IN_COLAB:
     CHECKPOINT_DIR = '/content/drive/MyDrive/Colab_Data/dqn_thin_cloud'
@@ -29,6 +33,9 @@ if IN_COLAB:
 else:
     CHECKPOINT_DIR = 'checkpoints/dqn_thin_cloud'
     DATA_DIR = 'data/cloudsen12_processed_1000'
+
+print(f"🔍 Environment: {'Colab' if IN_COLAB else 'Local'}")
+print(f"📂 Data directory: {DATA_DIR}")
 
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
