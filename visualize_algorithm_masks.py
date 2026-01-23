@@ -182,8 +182,8 @@ def visualize_comparison(patches, labels, cnn_masks, ppo_masks, dqn_masks,
     """Create side-by-side comparison visualization with TP/FN/FP overlays."""
     from sklearn.metrics import f1_score
     
-    # 5 columns: RGB, Ground Truth, CNN, PPO, DQN
-    fig, axes = plt.subplots(num_samples, 5, figsize=(20, 4*num_samples))
+    # 7 columns: RGB, Ground Truth, CNN, PPO, DQN, PPO Improvement, DQN Improvement
+    fig, axes = plt.subplots(num_samples, 7, figsize=(28, 4*num_samples))
     
     if num_samples == 1:
         axes = axes.reshape(1, -1)
@@ -243,19 +243,52 @@ def visualize_comparison(patches, labels, cnn_masks, ppo_masks, dqn_masks,
         dqn_thin_recall = np.sum((dqn_masks[i] == 1) & thin_cloud_mask) / max(thin_cloud_mask.sum(), 1)
         axes[i, 4].set_title(f'DQN\nThin Recall: {dqn_thin_recall*100:.1f}%\nF1: {dqn_f1:.3f}', fontsize=11)
         axes[i, 4].axis('off')
+        
+        # Column 6: PPO Improvement (Green=Fixed, Red=Lost, Cyan=Thin improved)
+        ppo_improvement = np.zeros((*gt_binary.shape, 3))
+        # Green: PPO fixed (baseline missed, PPO caught)
+        ppo_improvement[:, :, 1] = (ppo_masks[i] == 1) & (cnn_masks[i] == 0) & (gt_binary == 1)
+        # Red: PPO lost (baseline caught, PPO missed)
+        ppo_improvement[:, :, 0] = (ppo_masks[i] == 0) & (cnn_masks[i] == 1) & (gt_binary == 1)
+        # Cyan: Thin clouds that PPO improved
+        ppo_thin_improved = thin_cloud_mask & (ppo_masks[i] == 1) & (cnn_masks[i] == 0)
+        ppo_improvement[:, :, 2] = np.maximum(ppo_improvement[:, :, 2], ppo_thin_improved.astype(float))
+        ppo_improvement[:, :, 1] = np.maximum(ppo_improvement[:, :, 1], ppo_thin_improved.astype(float))
+        
+        axes[i, 5].imshow(ppo_improvement)
+        ppo_thin_improvement = ppo_thin_recall - cnn_thin_recall
+        axes[i, 5].set_title(f'PPO Improvement\n+{ppo_thin_improvement*100:.1f}% thin recall\nGreen=Fixed, Red=Lost, Cyan=Thin', fontsize=10)
+        axes[i, 5].axis('off')
+        
+        # Column 7: DQN Improvement (Green=Fixed, Red=Lost, Cyan=Thin improved)
+        dqn_improvement = np.zeros((*gt_binary.shape, 3))
+        # Green: DQN fixed (baseline missed, DQN caught)
+        dqn_improvement[:, :, 1] = (dqn_masks[i] == 1) & (cnn_masks[i] == 0) & (gt_binary == 1)
+        # Red: DQN lost (baseline caught, DQN missed)
+        dqn_improvement[:, :, 0] = (dqn_masks[i] == 0) & (cnn_masks[i] == 1) & (gt_binary == 1)
+        # Cyan: Thin clouds that DQN improved
+        dqn_thin_improved = thin_cloud_mask & (dqn_masks[i] == 1) & (cnn_masks[i] == 0)
+        dqn_improvement[:, :, 2] = np.maximum(dqn_improvement[:, :, 2], dqn_thin_improved.astype(float))
+        dqn_improvement[:, :, 1] = np.maximum(dqn_improvement[:, :, 1], dqn_thin_improved.astype(float))
+        
+        axes[i, 6].imshow(dqn_improvement)
+        dqn_thin_improvement = dqn_thin_recall - cnn_thin_recall
+        axes[i, 6].set_title(f'DQN Improvement\n+{dqn_thin_improvement*100:.1f}% thin recall\nGreen=Fixed, Red=Lost, Cyan=Thin', fontsize=10)
+        axes[i, 6].axis('off')
     
     # Add legend
     legend_elements = [
-        mpatches.Patch(color=[0, 1, 0], label='True Positive (TP)'),
-        mpatches.Patch(color=[1, 0, 0], label='False Negative (FN)'),
+        mpatches.Patch(color=[0, 1, 0], label='True Positive (TP) / Fixed'),
+        mpatches.Patch(color=[1, 0, 0], label='False Negative (FN) / Lost'),
         mpatches.Patch(color=[0, 0, 1], label='False Positive (FP)'),
         mpatches.Patch(color=[1, 1, 0], label='Thin Cloud (GT)'),
+        mpatches.Patch(color=[0, 1, 1], label='Thin Cloud Improved'),
     ]
     fig.legend(handles=legend_elements, loc='upper center', 
-               bbox_to_anchor=(0.5, 0.02), ncol=4, fontsize=11)
+               bbox_to_anchor=(0.5, 0.02), ncol=5, fontsize=10)
     
-    plt.suptitle('Algorithm Comparison: CNN Baseline vs PPO vs DQN\n(Green=TP, Red=FN, Blue=FP)', 
-                 fontsize=16, fontweight='bold', y=1.02)
+    plt.suptitle('Algorithm Comparison: CNN Baseline vs PPO vs DQN\n(Columns 1-5: Green=TP, Red=FN, Blue=FP | Columns 6-7: Green=Fixed, Red=Lost, Cyan=Thin Improved)', 
+                 fontsize=14, fontweight='bold', y=1.02)
     plt.tight_layout(rect=[0, 0.03, 1, 0.98])
     
     if save_path:
