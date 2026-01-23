@@ -12,8 +12,12 @@ import glob
 import numpy as np
 from datetime import datetime
 
-# Check if running in Colab
-IN_COLAB = 'google.colab' in sys.modules
+# Check if running in Colab (multiple detection methods)
+IN_COLAB = (
+    'google.colab' in sys.modules or 
+    os.path.exists('/content') or
+    'COLAB_GPU' in os.environ
+)
 
 if IN_COLAB:
     PPO_MODEL_DIR = '/content/drive/MyDrive/Colab_Data/thin_cloud_v2'
@@ -25,6 +29,9 @@ else:
     DQN_MODEL_DIR = 'checkpoints/dqn_thin_cloud'
     DATA_DIR = 'data/cloudsen12_processed_1000'
     OUTPUT_DIR = 'results/algorithm_comparison'
+
+print(f"🔍 Environment: {'Colab' if IN_COLAB else 'Local'}")
+print(f"📂 Data directory: {DATA_DIR}")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
