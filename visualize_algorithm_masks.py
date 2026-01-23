@@ -182,7 +182,8 @@ def visualize_comparison(patches, labels, cnn_masks, ppo_masks, dqn_masks,
     """Create side-by-side comparison visualization with TP/FN/FP overlays."""
     from sklearn.metrics import f1_score
     
-    fig, axes = plt.subplots(num_samples, 6, figsize=(24, 4*num_samples))
+    # 5 columns: RGB, Ground Truth, CNN, PPO, DQN
+    fig, axes = plt.subplots(num_samples, 5, figsize=(20, 4*num_samples))
     
     if num_samples == 1:
         axes = axes.reshape(1, -1)
@@ -242,22 +243,6 @@ def visualize_comparison(patches, labels, cnn_masks, ppo_masks, dqn_masks,
         dqn_thin_recall = np.sum((dqn_masks[i] == 1) & thin_cloud_mask) / max(thin_cloud_mask.sum(), 1)
         axes[i, 4].set_title(f'DQN\nThin Recall: {dqn_thin_recall*100:.1f}%\nF1: {dqn_f1:.3f}', fontsize=11)
         axes[i, 4].axis('off')
-        
-        # Column 6: Improvement visualization (DQN vs CNN)
-        improvement_vis = np.zeros((*gt_binary.shape, 3))
-        # Green: DQN fixed (CNN missed, DQN caught)
-        improvement_vis[:, :, 1] = (dqn_masks[i] == 1) & (cnn_masks[i] == 0) & (gt_binary == 1)
-        # Red: DQN lost (CNN caught, DQN missed)
-        improvement_vis[:, :, 0] = (dqn_masks[i] == 0) & (cnn_masks[i] == 1) & (gt_binary == 1)
-        # Cyan: Thin clouds that DQN improved
-        thin_improved = thin_cloud_mask & (dqn_masks[i] == 1) & (cnn_masks[i] == 0)
-        improvement_vis[:, :, 2] = thin_improved.astype(float)
-        improvement_vis[:, :, 1] = np.maximum(improvement_vis[:, :, 1], thin_improved.astype(float))
-        
-        axes[i, 5].imshow(improvement_vis)
-        improvement = dqn_thin_recall - cnn_thin_recall
-        axes[i, 5].set_title(f'DQN Improvement\n{improvement*100:+.1f}% thin recall\nGreen=Fixed, Red=Lost', fontsize=11)
-        axes[i, 5].axis('off')
     
     # Add legend
     legend_elements = [
@@ -265,10 +250,9 @@ def visualize_comparison(patches, labels, cnn_masks, ppo_masks, dqn_masks,
         mpatches.Patch(color=[1, 0, 0], label='False Negative (FN)'),
         mpatches.Patch(color=[0, 0, 1], label='False Positive (FP)'),
         mpatches.Patch(color=[1, 1, 0], label='Thin Cloud (GT)'),
-        mpatches.Patch(color=[0, 1, 1], label='Thin Cloud Fixed'),
     ]
     fig.legend(handles=legend_elements, loc='upper center', 
-               bbox_to_anchor=(0.5, 0.02), ncol=5, fontsize=11)
+               bbox_to_anchor=(0.5, 0.02), ncol=4, fontsize=11)
     
     plt.suptitle('Algorithm Comparison: CNN Baseline vs PPO vs DQN\n(Green=TP, Red=FN, Blue=FP)', 
                  fontsize=16, fontweight='bold', y=1.02)
@@ -277,6 +261,7 @@ def visualize_comparison(patches, labels, cnn_masks, ppo_masks, dqn_masks,
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
         print(f"Saved visualization to: {save_path}")
+    
     
     plt.show()
 
