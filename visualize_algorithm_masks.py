@@ -81,12 +81,13 @@ def apply_cnn_baseline(patch):
     # Threshold at 0.5 for binary mask
     cloud_mask = (cloud_prob[0] > 0.5).astype(np.uint8)
     
-    return cloud_mask
+    return cloud_mask, cloud_prob[0]  # Return both mask and probability
 
 
-def apply_ppo_model(patch, model):
+def apply_ppo_model(patch, model, cnn_prob, label):
     """Apply PPO model to get cloud mask."""
-    env = ThinCloudDetectionEnv(patch)
+    gt_binary = (label > 0).astype(np.uint8)
+    env = ThinCloudDetectionEnv(patch, cnn_prob, gt_binary)
     obs, _ = env.reset()
     
     action, _ = model.predict(obs, deterministic=True)
@@ -95,9 +96,10 @@ def apply_ppo_model(patch, model):
     return env.current_prediction
 
 
-def apply_dqn_model(patch, model):
+def apply_dqn_model(patch, model, cnn_prob, label):
     """Apply DQN model to get cloud mask."""
-    env = ThinCloudDetectionEnvDiscrete(patch)
+    gt_binary = (label > 0).astype(np.uint8)
+    env = ThinCloudDetectionEnvDiscrete(patch, cnn_prob, gt_binary)
     obs, _ = env.reset()
     
     action, _ = model.predict(obs, deterministic=True)
@@ -286,19 +288,19 @@ def main():
     ppo_masks = []
     dqn_masks = []
     
-    for i, patch in enumerate(selected_patches):
+    for i, (patch, label) in enumerate(zip(selected_patches, selected_labels)):
         print(f"  Processing patch {i+1}/5...")
         
-        # CNN baseline
-        cnn_mask = apply_cnn_baseline(patch)
+        # CNN baseline - get both mask and probability
+        cnn_mask, cnn_prob = apply_cnn_baseline(patch)
         cnn_masks.append(cnn_mask)
         
-        # PPO
-        ppo_mask = apply_ppo_model(patch, ppo_model)
+        # PPO - needs cnn_prob and label
+        ppo_mask = apply_ppo_model(patch, ppo_model, cnn_prob, label)
         ppo_masks.append(ppo_mask)
         
-        # DQN
-        dqn_mask = apply_dqn_model(patch, dqn_model)
+        # DQN - needs cnn_prob and label
+        dqn_mask = apply_dqn_model(patch, dqn_model, cnn_prob, label)
         dqn_masks.append(dqn_mask)
     
     print("All predictions generated")
