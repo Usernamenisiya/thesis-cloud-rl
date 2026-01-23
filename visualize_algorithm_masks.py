@@ -270,7 +270,7 @@ def visualize_comparison(patches, labels, cnn_masks, ppo_masks, dqn_masks,
     fig.legend(handles=legend_elements, loc='upper center', 
                bbox_to_anchor=(0.5, 0.02), ncol=5, fontsize=11)
     
-    plt.suptitle('🚀 Algorithm Comparison: CNN Baseline vs PPO vs DQN\n(Green=TP, Red=FN, Blue=FP)', 
+    plt.suptitle('Algorithm Comparison: CNN Baseline vs PPO vs DQN\n(Green=TP, Red=FN, Blue=FP)', 
                  fontsize=16, fontweight='bold', y=1.02)
     plt.tight_layout(rect=[0, 0.03, 1, 0.98])
     
@@ -406,26 +406,18 @@ def main():
     print("Metrics for Selected Patches:")
     print("="*60)
     
-    for i, (label, cnn, ppo, dqn) in enumerate(zip(selected_labels, cnn_masks, ppo_masks, dqn_masks)):
-        print(f"\nPatch {i+1} (Index {selected_indices[i]}):")
+    for i, sample in enumerate(selected_samples):
+        print(f"\nPatch {i+1} (Index {sample['idx']}):")
         
-        # Convert labels to binary (cloud vs no cloud)
-        gt_binary = (label > 0).astype(int)
-        thin_cloud_mask = (label == 2)
+        thin_cloud_mask = (sample['label'] == 2)
+        thin_cloud_pct = np.sum(thin_cloud_mask) / sample['label'].size * 100
         
-        # Calculate thin cloud IoU for each method
-        if np.sum(thin_cloud_mask) > 0:
-            cnn_thin_iou = np.sum((cnn == 1) & thin_cloud_mask) / np.sum((cnn == 1) | thin_cloud_mask)
-            ppo_thin_iou = np.sum((ppo == 1) & thin_cloud_mask) / np.sum((ppo == 1) | thin_cloud_mask)
-            dqn_thin_iou = np.sum((dqn == 1) & thin_cloud_mask) / np.sum((dqn == 1) | thin_cloud_mask)
-            
-            print(f"  Thin Cloud Coverage: {thin_cloud_ratios[selected_indices[i]]*100:.1f}%")
-            print(f"  Thin Cloud IoU:")
-            print(f"    CNN: {cnn_thin_iou*100:.2f}%")
-            print(f"    PPO: {ppo_thin_iou*100:.2f}%")
-            print(f"    DQN: {dqn_thin_iou*100:.2f}%")
-        else:
-            print(f"  No thin clouds in this patch")
+        # Display metrics from pre-computed values
+        print(f"  Thin Cloud Coverage: {thin_cloud_pct:.1f}%")
+        print(f"  Thin Cloud Recall:")
+        print(f"    CNN: {sample['cnn_thin_recall']*100:.1f}%")
+        print(f"    PPO: {sample['ppo_thin_recall']*100:.1f}% (+{sample['ppo_improvement']*100:.1f}%)")
+        print(f"    DQN: {sample['dqn_thin_recall']*100:.1f}% (+{sample['dqn_improvement']*100:.1f}%)")
     
     print("\n" + "="*60)
     print("Visualization complete!")
