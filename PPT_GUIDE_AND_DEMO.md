@@ -33,12 +33,12 @@
 - Bullet points:
   - Thick clouds: Easy to detect (high contrast, opaque)
   - Thin clouds: Difficult (semi-transparent, low contrast)
-  - Current detectors miss 83%+ of thin clouds!
+  - Current detectors catch only ~54% of thin clouds—missing nearly half!
 
 **Visual Suggestion:** Use your RGB patch showing both thick and thin clouds with annotations
 
 **What to Say:**
-> "Satellite imagery is crucial for weather forecasting, agriculture monitoring, and climate research. While current cloud detectors like s2cloudless work well for thick, opaque clouds, they struggle badly with thin, semi-transparent clouds. Our baseline detector only catches about 17% of thin clouds—missing over 80%! This is a critical gap because thin clouds affect data quality just as much as thick clouds."
+> "Satellite imagery is crucial for weather forecasting, agriculture monitoring, and climate research. While current cloud detectors like s2cloudless work well for thick, opaque clouds, they struggle with thin, semi-transparent clouds. Our baseline detector catches only 53.72% of thin clouds—missing nearly half! This is a critical gap because thin clouds affect data quality just as much as thick clouds."
 
 ---
 
