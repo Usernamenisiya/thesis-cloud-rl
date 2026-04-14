@@ -2,11 +2,11 @@
 Thin Cloud Detection RL Environment - IMPROVED VERSION
 
 Aligned with best practices:
-✅ CNN output as RL state (not raw image)
-✅ Patch-level actions (64x64)
-✅ Reward = IoU improvement on THIN CLOUDS ONLY
-✅ Proper normalization handling
-✅ Focused reward structure
+ CNN output as RL state (not raw image)
+ Patch-level actions (64x64)
+ Reward = IoU improvement on THIN CLOUDS ONLY
+ Proper normalization handling
+ Focused reward structure
 
 Author: Thesis Implementation
 Date: January 2026
@@ -247,27 +247,27 @@ class ThinCloudDetectionEnv(gym.Env):
         
         reward = 0.0
         
-        # ============================================================
+    
         # COMPONENT 1: Thin cloud IoU improvement (70% weight)
-        # ============================================================
+
         if thin_gt_flat.sum() > 0:
             baseline_thin_iou = jaccard_score(thin_gt_flat, baseline_flat, zero_division=0)
             adjusted_thin_iou = jaccard_score(thin_gt_flat, pred_flat, zero_division=0)
             thin_improvement = adjusted_thin_iou - baseline_thin_iou
             reward += 0.7 * thin_improvement * 10.0
         
-        # ============================================================
+     
         # COMPONENT 2: Overall F1 improvement (30% weight)
-        # ============================================================
+
         if gt_flat.sum() > 0:
             baseline_f1 = f1_score(gt_flat, baseline_flat, zero_division=0)
             adjusted_f1 = f1_score(gt_flat, pred_flat, zero_division=0)
             f1_improvement = adjusted_f1 - baseline_f1
             reward += 0.3 * f1_improvement * 10.0
         
-        # ============================================================
+
         # PENALTY: Precision loss (prevent over-detection)
-        # ============================================================
+
         if pred_flat.sum() > 0:
             baseline_precision = precision_score(gt_flat, baseline_flat, zero_division=1)
             adjusted_precision = precision_score(gt_flat, pred_flat, zero_division=1)
@@ -276,9 +276,8 @@ class ThinCloudDetectionEnv(gym.Env):
             if precision_loss > 0.1:  # Lost more than 10% precision
                 reward -= precision_loss * 5.0  # Strong penalty
         
-        # ============================================================
         # PENALTY: False positives on clear sky
-        # ============================================================
+
         if gt_flat.sum() == 0 and pred_flat.sum() > 0:
             false_positive_rate = pred_flat.sum() / pred_flat.size
             reward -= false_positive_rate * 3.0
@@ -358,7 +357,7 @@ def test_environment():
     obs, reward, done, _, _ = env.step(action)
     print(f"Reward: {reward:.4f}")
     
-    print("✅ Test passed!")
+    print(" Test passed!")
 
 
 if __name__ == "__main__":

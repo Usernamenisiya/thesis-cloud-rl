@@ -1,7 +1,5 @@
 """
 Compare CNN Baseline, PPO, and DQN on Thin Cloud Detection
-Generates comparison table and visualizations for thesis.
-
 Usage:
     python compare_algorithms.py
 """
@@ -30,8 +28,8 @@ else:
     DATA_DIR = 'data/cloudsen12_processed_1000'
     OUTPUT_DIR = 'results/algorithm_comparison'
 
-print(f"🔍 Environment: {'Colab' if IN_COLAB else 'Local'}")
-print(f"📂 Data directory: {DATA_DIR}")
+print(f" Environment: {'Colab' if IN_COLAB else 'Local'}")
+print(f" Data directory: {DATA_DIR}")
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -47,7 +45,7 @@ def load_test_data():
     test_images = image_files[split_idx:]
     test_masks = mask_files[split_idx:]
     
-    print(f"📊 Loaded {len(test_images)} test patches")
+    print(f" Loaded {len(test_images)} test patches")
     return test_images, test_masks
 
 def evaluate_baseline(test_images, test_masks, threshold=0.5):
@@ -58,7 +56,7 @@ def evaluate_baseline(test_images, test_masks, threshold=0.5):
     from rl_thin_cloud_environment import ThinCloudDetectionEnv
     from tqdm import tqdm
     
-    print("\n🔍 Evaluating CNN Baseline...")
+    print("\n Evaluating CNN Baseline...")
     
     all_gt = []
     all_pred = []
@@ -112,11 +110,11 @@ def evaluate_ppo(test_images, test_masks):
     # Find latest PPO model
     checkpoints = sorted(glob.glob(f'{PPO_MODEL_DIR}/thin_cloud_*_steps.zip'))
     if not checkpoints:
-        print("❌ No PPO model found!")
+        print(" No PPO model found!")
         return None
     
     model_path = checkpoints[-1]
-    print(f"\n🔍 Evaluating PPO: {model_path}")
+    print(f"\ Evaluating PPO: {model_path}")
     
     model = PPO.load(model_path)
     
@@ -193,7 +191,7 @@ def evaluate_dqn(test_images, test_masks):
     # Find latest DQN model
     checkpoints = sorted(glob.glob(f'{DQN_MODEL_DIR}/dqn_thin_cloud_*_steps.zip'))
     if not checkpoints:
-        print("❌ No DQN model found!")
+        print(" No DQN model found!")
         return None
     
     model_path = checkpoints[-1]
@@ -265,7 +263,7 @@ def evaluate_dqn(test_images, test_masks):
 def create_comparison_table(results_list):
     """Create and print comparison table."""
     print("\n" + "=" * 80)
-    print("📊 ALGORITHM COMPARISON: CNN vs PPO vs DQN")
+    print(" ALGORITHM COMPARISON: CNN vs PPO vs DQN")
     print("=" * 80)
     
     header = f"{'Method':<15} {'Accuracy':>10} {'Precision':>10} {'Recall':>10} {'F1':>10} {'Thin Recall':>12}"
@@ -289,7 +287,7 @@ def create_comparison_plot(results_list):
     results_list = [r for r in results_list if r is not None]
     
     if len(results_list) < 2:
-        print("⚠️ Need at least 2 methods to compare")
+        print(" Need at least 2 methods to compare")
         return
     
     methods = [r['method'] for r in results_list]
@@ -336,7 +334,7 @@ def create_comparison_plot(results_list):
                         ha='center', fontsize=14, fontweight='bold')
     
     axes[1].set_ylabel('Thin Cloud Recall (%)', fontsize=12)
-    axes[1].set_title('🎯 Key Metric: Thin Cloud Detection', fontsize=14, fontweight='bold')
+    axes[1].set_title(' Key Metric: Thin Cloud Detection', fontsize=14, fontweight='bold')
     axes[1].set_ylim(0, max(thin_values) * 1.2)
     
     plt.suptitle('Algorithm Comparison: CNN Baseline vs PPO vs DQN', 
@@ -346,12 +344,12 @@ def create_comparison_plot(results_list):
     # Save
     output_path = f'{OUTPUT_DIR}/algorithm_comparison.png'
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
-    print(f"\n✅ Comparison plot saved to: {output_path}")
+    print(f"\n Comparison plot saved to: {output_path}")
     plt.show()
 
 def main():
     print("=" * 70)
-    print("🔬 ALGORITHM COMPARISON: CNN vs PPO vs DQN")
+    print(" ALGORITHM COMPARISON: CNN vs PPO vs DQN")
     print("=" * 70)
     print(f"   Thin Cloud Detection Task")
     print(f"   Dataset: CloudSEN12 (1000 patches)")
@@ -383,7 +381,7 @@ def main():
     import json
     with open(f'{OUTPUT_DIR}/comparison_results.json', 'w') as f:
         json.dump(results, f, indent=2)
-    print(f"\n💾 Results saved to: {OUTPUT_DIR}/comparison_results.json")
+    print(f"\n Results saved to: {OUTPUT_DIR}/comparison_results.json")
 
 if __name__ == "__main__":
     main()

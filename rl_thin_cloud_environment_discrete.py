@@ -1,12 +1,4 @@
-"""
-Discrete Action Environment for Thin Cloud Detection (DQN Compatible)
-Converts the continuous action space to discrete for DQN comparison.
 
-Action Space: 15 discrete actions
-- 5 threshold_delta options: [-0.2, -0.1, 0.0, 0.1, 0.2]
-- 3 thin_boost options: [0.0, 0.15, 0.3]
-- Combined: 5 × 3 = 15 actions
-"""
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -270,4 +262,16 @@ if __name__ == "__main__":
             break
     
     print(f"Episode finished: {steps} steps, total reward: {total_reward:.4f}")
-    print("✅ Discrete environment test passed!")
+    print(" Discrete environment test passed!")
+
+
+
+"""
+Discrete Action Environment for Thin Cloud Detection (DQN Compatible)
+Converts the continuous action space to discrete for DQN comparison.
+
+Action Space: 15 discrete actions
+- 5 threshold_delta options: [-0.2, -0.1, 0.0, 0.1, 0.2]
+- 3 thin_boost options: [0.0, 0.15, 0.3]
+- Combined: 5 × 3 = 15 actions
+"""

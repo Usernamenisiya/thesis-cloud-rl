@@ -1,16 +1,4 @@
-"""
-DQN Training Script for Thin Cloud Detection
-Resumable training with checkpointing, comparable to PPO version.
 
-Usage:
-    python train_dqn_thin_cloud.py
-
-The script will:
-- Auto-resume from latest checkpoint if available
-- Save checkpoints every 10,000 steps
-- Log training progress
-- Save to Google Drive (if in Colab)
-"""
 
 import os
 import sys
@@ -34,8 +22,8 @@ else:
     CHECKPOINT_DIR = 'checkpoints/dqn_thin_cloud'
     DATA_DIR = 'data/cloudsen12_processed_1000'
 
-print(f"🔍 Environment: {'Colab' if IN_COLAB else 'Local'}")
-print(f"📂 Data directory: {DATA_DIR}")
+print(f" Environment: {'Colab' if IN_COLAB else 'Local'}")
+print(f" Data directory: {DATA_DIR}")
 
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 
@@ -55,14 +43,14 @@ def load_data():
     if len(image_files) == 0:
         raise FileNotFoundError(f"No data found in {DATA_DIR}")
     
-    print(f"📂 Found {len(image_files)} image patches")
+    print(f" Found {len(image_files)} image patches")
     
     # Train/test split
     split_idx = int(TRAIN_SPLIT * len(image_files))
     train_images = image_files[:split_idx]
     train_masks = mask_files[:split_idx]
     
-    print(f"📊 Training on {len(train_images)} patches")
+    print(f" Training on {len(train_images)} patches")
     
     return train_images, train_masks
 
@@ -82,7 +70,7 @@ def create_env(image_path, mask_path):
     return ThinCloudDetectionEnvDiscrete(image, cnn_prob, gt_binary, patch_size=64)
 
 def find_latest_checkpoint():
-    """Find the latest checkpoint to resume from."""
+    """Pangitaon ang latest checkpoint aron didto ra mo resume ug train."""
     checkpoints = sorted(glob.glob(f'{CHECKPOINT_DIR}/dqn_thin_cloud_*_steps.zip'))
     if checkpoints:
         latest = checkpoints[-1]
@@ -119,12 +107,12 @@ def save_progress(total_steps, session_info):
     return progress
 
 def train():
-    """Main training loop."""
+    """Diri ang Main training loop."""
     from stable_baselines3 import DQN
     from stable_baselines3.common.callbacks import CheckpointCallback, BaseCallback
     
     print("=" * 70)
-    print("🧠 DQN Training for Thin Cloud Detection")
+    print(" DQN Training for Thin Cloud Detection")
     print("=" * 70)
     
     # Load data
@@ -134,7 +122,7 @@ def train():
     checkpoint_path, start_steps = find_latest_checkpoint()
     
     if checkpoint_path:
-        print(f"📂 Resuming from: {checkpoint_path}")
+        print(f" Resuming from: {checkpoint_path}")
         print(f"   Total steps so far: {start_steps:,}")
         model = DQN.load(checkpoint_path)
         # Need to set the environment
@@ -142,7 +130,7 @@ def train():
         env = create_env(train_images[idx], train_masks[idx])
         model.set_env(env)
     else:
-        print("🆕 Starting fresh training")
+        print(" Starting fresh training")
         # Create initial environment
         idx = np.random.randint(len(train_images))
         env = create_env(train_images[idx], train_masks[idx])
@@ -199,9 +187,9 @@ def train():
                         self.model._last_obs = wrapped_env.reset()
                         
                         self.last_rotation = self.episode_count
-                        print(f"   🔄 Rotated to image {idx} (episode {self.episode_count})")
+                        print(f"    Rotated to image {idx} (episode {self.episode_count})")
                     except Exception as e:
-                        print(f"   ⚠️ Rotation failed: {e}")
+                        print(f"    Rotation failed: {e}")
             return True
     
     # Checkpoint callback
@@ -216,7 +204,7 @@ def train():
     rotate_callback = RotateEnvCallback(train_images, train_masks, rotate_freq=100)
     
     # Train
-    print(f"\n🚀 Training for {TOTAL_TIMESTEPS:,} timesteps...")
+    print(f"\n Training for {TOTAL_TIMESTEPS:,} timesteps...")
     print(f"   Checkpoints saved to: {CHECKPOINT_DIR}")
     print("=" * 70)
     
@@ -236,7 +224,7 @@ def train():
     final_steps = start_steps + TOTAL_TIMESTEPS
     final_path = f"{CHECKPOINT_DIR}/dqn_thin_cloud_{final_steps}_steps"
     model.save(final_path)
-    print(f"\n💾 Saved final model: {final_path}.zip")
+    print(f"\n Saved final model: {final_path}.zip")
     
     # Calculate mean reward from episode info buffer
     mean_reward = 0.0
@@ -256,7 +244,7 @@ def train():
     progress = save_progress(final_steps, session_info)
     
     print("\n" + "=" * 70)
-    print("📊 Training Summary")
+    print(" Training Summary")
     print("=" * 70)
     print(f"   Total steps: {final_steps:,}")
     print(f"   Sessions: {progress['sessions']}")

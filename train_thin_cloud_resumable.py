@@ -1,26 +1,4 @@
-"""
-Resumable Thin Cloud Detection Training - IMPROVED VERSION
 
-Aligned with best practices:
-✅ CNN output as RL state (not raw image)
-✅ Patch-level actions (64x64)
-✅ Reward = IoU improvement on THIN CLOUDS ONLY
-✅ Limited episodes per scene (uses subset per epoch)
-✅ PPO with checkpointing
-
-Features:
-- Automatic checkpoint detection and resumption
-- 100k step sessions (faster iterations)
-- Saves every 10k steps to Google Drive
-- Uses subset of patches per epoch for efficiency
-- Tracks thin cloud IoU improvement specifically
-
-Usage:
-    python train_thin_cloud_resumable.py
-    
-Author: Thesis Implementation
-Date: January 2026
-"""
 
 import os
 import glob
@@ -71,7 +49,7 @@ class ProgressTracker:
         if os.path.exists(self.progress_file):
             with open(self.progress_file, 'r') as f:
                 self.progress = json.load(f)
-            print(f"📊 Loaded progress: {self.progress['total_steps']:,} steps completed")
+            print(f" Loaded progress: {self.progress['total_steps']:,} steps completed")
         else:
             self.progress = {
                 'total_steps': 0,
@@ -116,7 +94,7 @@ def evaluate_thin_cloud_performance(model, image_files, mask_files, num_samples=
     
     Returns thin cloud IoU - THE KEY METRIC.
     """
-    print("\n📊 Evaluating thin cloud detection...")
+    print("\n Evaluating thin cloud detection...")
     
     all_thin_gt = []
     all_pred = []
@@ -172,14 +150,14 @@ def evaluate_thin_cloud_performance(model, image_files, mask_files, num_samples=
         thin_iou_model = jaccard_score(thin_gt, pred, zero_division=0)
         thin_iou_baseline = jaccard_score(thin_gt, baseline, zero_division=0)
         
-        print(f"\n🎯 THIN CLOUD METRICS:")
+        print(f"\n THIN CLOUD METRICS:")
         print(f"  Baseline IoU:    {thin_iou_baseline:.4f}")
         print(f"  RL Model IoU:    {thin_iou_model:.4f}")
         print(f"  Improvement:     {(thin_iou_model - thin_iou_baseline)*100:+.2f}%")
         
         return thin_iou_model
     else:
-        print("⚠️ No thin clouds found in evaluation samples")
+        print(" No thin clouds found in evaluation samples")
         return 0.0
 
 
@@ -202,9 +180,9 @@ def train_thin_cloud_detection(
         patches_per_epoch: Limit patches per scene (friend's recommendation)
     """
     print("\n" + "="*80)
-    print("🎯 THIN CLOUD DETECTION - RESUMABLE TRAINING")
+    print(" THIN CLOUD DETECTION - RESUMABLE TRAINING")
     print("="*80)
-    print(f"\n✅ Following best practices:")
+    print(f"\n Following best practices:")
     print(f"   - CNN output as state (not raw pixels)")
     print(f"   - Patch-level actions (64x64)")
     print(f"   - Reward = IoU improvement on thin clouds ONLY")
@@ -222,7 +200,7 @@ def train_thin_cloud_detection(
     latest_checkpoint = find_latest_checkpoint(checkpoint_dir)
     
     # Create environment with first image
-    print("\n📦 Initializing environment...")
+    print("\n Initializing environment...")
     idx = np.random.randint(len(image_files))
     image = load_sentinel2_image(image_files[idx])
     cnn_prob = get_cloud_mask(image)
@@ -234,10 +212,10 @@ def train_thin_cloud_detection(
     
     # Load or create model
     if latest_checkpoint:
-        print(f"📂 Resuming from: {latest_checkpoint}")
+        print(f" Resuming from: {latest_checkpoint}")
         model = PPO.load(latest_checkpoint, env=vec_env)
     else:
-        print("🆕 Creating new model...")
+        print(" Creating new model...")
         model = PPO(
             "MlpPolicy",
             vec_env,
@@ -259,7 +237,7 @@ def train_thin_cloud_detection(
     metrics_callback = ThinCloudMetricsCallback(eval_freq=5000)
     
     # Training loop with random scene sampling
-    print(f"\n🚀 Training for {steps_per_session:,} steps...")
+    print(f"\n Training for {steps_per_session:,} steps...")
     print(f"   Using {len(image_files)} training scenes")
     print(f"   {patches_per_epoch} patches per scene max")
     
@@ -301,13 +279,13 @@ def train_thin_cloud_detection(
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
     final_path = f"{model_dir}/ppo_thin_cloud_{timestamp}"
     model.save(f"{final_path}/model")
-    print(f"\n💾 Model saved to: {final_path}")
+    print(f"\n Model saved to: {final_path}")
     
     # Also save to Drive for persistence
     drive_path = "/content/drive/MyDrive/Colab_Data/thin_cloud_final"
     os.makedirs(drive_path, exist_ok=True)
     model.save(f"{drive_path}/model")
-    print(f"💾 Model also saved to: {drive_path}")
+    print(f" Model also saved to: {drive_path}")
     
     # Evaluate
     thin_iou = evaluate_thin_cloud_performance(model, image_files, mask_files)
@@ -315,7 +293,7 @@ def train_thin_cloud_detection(
     # Save progress
     tracker.save_progress(total_steps, thin_iou)
     
-    print(f"\n✅ Session complete!")
+    print(f"\n Session complete!")
     print(f"   Total steps this session: {total_steps:,}")
     print(f"   Total steps overall: {tracker.progress['total_steps']:,}")
     print(f"   Best thin cloud IoU: {tracker.progress['best_thin_iou']:.4f}")
@@ -338,20 +316,20 @@ def main():
             break
     
     if data_dir is None:
-        print("❌ No data directory found!")
+        print(" No data directory found!")
         return
     
     image_files = sorted(glob.glob(f'{data_dir}/*_image.tif'))
     mask_files = sorted(glob.glob(f'{data_dir}/*_mask.tif'))
     
-    print(f"📂 Found {len(image_files)} images in {data_dir}")
+    print(f" Found {len(image_files)} images in {data_dir}")
     
     # Use 80% for training
     split_idx = int(0.8 * len(image_files))
     train_images = image_files[:split_idx]
     train_masks = mask_files[:split_idx]
     
-    print(f"🎓 Training on {len(train_images)} images")
+    print(f" Training on {len(train_images)} images")
     
     # Train
     model, thin_iou = train_thin_cloud_detection(
@@ -362,10 +340,35 @@ def main():
     )
     
     print("\n" + "="*80)
-    print("🎉 TRAINING COMPLETE!")
+    print(" TRAINING COMPLETE!")
     print(f"   Final thin cloud IoU: {thin_iou:.4f}")
     print("="*80)
 
 
 if __name__ == "__main__":
     main()
+
+
+"""
+Resumable Thin Cloud Detection Training - IMPROVED VERSION
+
+Aligned with best practices:
+ CNN output as RL state (not raw image)
+ Patch-level actions (64x64)
+ Reward = IoU improvement on THIN CLOUDS ONLY
+ Limited episodes per scene (uses subset per epoch)
+ PPO with checkpointing
+
+Features:
+- Automatic checkpoint detection and resumption
+- 100k step sessions (faster iterations)
+- Saves every 10k steps to Google Drive
+- Uses subset of patches per epoch for efficiency
+- Tracks thin cloud IoU improvement specifically
+
+Usage:
+    python train_thin_cloud_resumable.py
+    
+Author: Thesis Implementation
+Date: January 2026
+"""
