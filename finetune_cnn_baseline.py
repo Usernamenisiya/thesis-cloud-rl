@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """
-Fine-tune s2cloudless CNN on CloudSEN12 data for improved baseline.
+Fine-tune s2cloudless on CloudSEN12 data for improved baseline.
 Freezes early layers and trains final layers on expert-labeled data.
 """
 import numpy as np
@@ -236,7 +236,7 @@ def finetune_cnn():
     f1 = f1_score(all_targets, all_preds, zero_division=0)
     
     print("\n" + "=" * 60)
-    print("🎯 FINE-TUNED CNN BASELINE")
+    print("🎯 FINE-TUNED s2cloudless BASELINE")
     print("=" * 60)
     print(f"\n📊 Performance:")
     print(f"  Accuracy:  {accuracy:.4f}")

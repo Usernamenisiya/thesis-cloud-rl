@@ -1,4 +1,4 @@
-# Baseline CNN Performance Analysis
+﻿# s2cloudless Baseline Performance Analysis
 
 ## 📊 Executive Summary
 
@@ -18,7 +18,7 @@ This performance gap demonstrates a critical limitation of general-purpose model
 
 ### CloudSEN12 Performance (Our evaluation - challenging distribution)
 ```
-📊 CNN Baseline (threshold=0.5):
+📊 s2cloudless Baseline (threshold=0.5):
   Accuracy:  0.6808 (68.08%)
   Precision: 0.1643 (16.43%)
   Recall:    0.2421 (24.21%)

@@ -70,7 +70,7 @@ def evaluate_model(model_path):
     print("📈 RESULTS")
     print("=" * 60)
     
-    print("\n🧠 CNN Baseline:")
+    print("\n🧠 s2cloudless Baseline:")
     print(f"  Accuracy:  {cnn_accuracy:.4f}")
     print(f"  Precision: {cnn_precision:.4f}")
     print(f"  Recall:    {cnn_recall:.4f}")

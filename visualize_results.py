@@ -1,6 +1,6 @@
-"""
+﻿"""
 Visualization script for thin cloud detection results.
-Shows side-by-side comparison of baseline CNN vs RL refined model.
+Shows side-by-side comparison of s2cloudless Baseline vs RL refined model.
 """
 
 import glob
@@ -137,10 +137,10 @@ for row, sample in enumerate(samples_to_show):
     axes[row, 1].set_title('Ground Truth\n(All Clouds)', fontsize=12)
     axes[row, 1].axis('off')
     
-    # Baseline CNN
+    # s2cloudless Baseline
     axes[row, 2].imshow(sample['baseline'], cmap='Blues', vmin=0, vmax=1)
     baseline_recall = np.sum((sample['baseline'] == 1) & (sample['gt'] == 1)) / max(sample['gt'].sum(), 1)
-    axes[row, 2].set_title(f'Baseline CNN\nRecall: {baseline_recall*100:.1f}%', fontsize=12)
+    axes[row, 2].set_title(f's2cloudless Baseline\nRecall: {baseline_recall*100:.1f}%', fontsize=12)
     axes[row, 2].axis('off')
     
     # RL Refined
@@ -163,7 +163,7 @@ for row, sample in enumerate(samples_to_show):
     axes[row, 4].set_title(f'Improvement\nGreen: +{improvement} pixels\n(Thin clouds in blue)', fontsize=12)
     axes[row, 4].axis('off')
 
-plt.suptitle('Thin Cloud Detection: Baseline CNN vs RL Refined Model', fontsize=16, fontweight='bold', y=1.02)
+plt.suptitle('Thin Cloud Detection: s2cloudless Baseline vs RL Refined Model', fontsize=16, fontweight='bold', y=1.02)
 plt.tight_layout()
 plt.savefig('thin_cloud_comparison.png', dpi=150, bbox_inches='tight')
 plt.show()
@@ -198,7 +198,7 @@ if len(samples_to_show) > 0:
     
     axes[1, 0].imshow(overlay_baseline)
     baseline_thin_recall = np.sum((sample['baseline'] == 1) & sample['thin_mask']) / max(sample['thin_mask'].sum(), 1)
-    axes[1, 0].set_title(f'Baseline CNN\nThin Cloud Recall: {baseline_thin_recall*100:.1f}%\n(Green=Correct, Red=Missed)', fontsize=12)
+    axes[1, 0].set_title(f's2cloudless Baseline\nThin Cloud Recall: {baseline_thin_recall*100:.1f}%\n(Green=Correct, Red=Missed)', fontsize=12)
     axes[1, 0].axis('off')
     
     overlay_rl = np.zeros((*sample['gt'].shape, 3))

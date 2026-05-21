@@ -1,4 +1,4 @@
-# 🎓 Thesis Documentation: Improving Cloud Detection Using Reinforcement Learning
+﻿# 🎓 Thesis Documentation: Improving Cloud Detection Using Reinforcement Learning
 
 **Title**: Enhancing Thin Cloud Detection in Satellite Imagery Using Reinforcement Learning
 
@@ -436,7 +436,7 @@ All results are measured on the **held-out test set** of 200 images that the mod
 
 | Algorithm | Accuracy | Precision | Recall | F1 Score | Thin Cloud Recall |
 |-----------|----------|-----------|--------|----------|-------------------|
-| **CNN Baseline** | 78.49% | 81.20% | 70.45% | 71.34% | 63.28% |
+| **s2cloudless Baseline** | 78.49% | 81.20% | 70.45% | 71.34% | 63.28% |
 | **PPO (720k steps)** | 79.90% | 80.00% | 74.20% | 72.79% | 71.64% |
 | **DQN (100k steps)** | **80.89%** | **79.70%** | **76.70%** | **73.38%** | **77.00%** |
 
@@ -446,7 +446,7 @@ All results are measured on the **held-out test set** of 200 images that the mod
 
 ```
 Thin Cloud Recall Improvement:
-CNN Baseline:  ████████████████████████████████░░░░░░░░░░  63.28%
+s2cloudless Baseline:  ████████████████████████████████░░░░░░░░░░  63.28%
 PPO:           ██████████████████████████████████████░░░░  71.64%  (+8.36%)
 DQN:           ██████████████████████████████████████████  77.00%  (+13.72%)
 ```
@@ -544,7 +544,7 @@ Our visualization shows 7 columns for each test patch:
 |--------|----------|--------------|
 | 1. RGB Image | Original satellite photo | Natural colors |
 | 2. Ground Truth | Expert-labeled clouds | Yellow = Thin clouds |
-| 3. CNN Baseline | s2cloudless predictions | Green=TP, Red=FN, Blue=FP |
+| 3. s2cloudless Baseline | s2cloudless predictions | Green=TP, Red=FN, Blue=FP |
 | 4. PPO | PPO-refined predictions | Green=TP, Red=FN, Blue=FP |
 | 5. DQN | DQN-refined predictions | Green=TP, Red=FN, Blue=FP |
 | 6. PPO Improvement | What PPO fixed/lost | Green=Fixed, Red=Lost, Cyan=Thin |
@@ -614,7 +614,7 @@ For Improvement Columns (6, 7):
 |------------|--------|---------------------|
 | Single dataset tested | May not generalize to other satellites | Test on additional datasets |
 | Fixed patch size (64×64) | May miss very large/small cloud features | Experiment with multi-scale |
-| Relies on CNN baseline | Performance bounded by CNN quality | Use better base CNN |
+| Relies on s2cloudless Baseline | Performance bounded by CNN quality | Use better base CNN |
 | Colab training constraints | Limited GPU time per session | Use dedicated GPU cluster |
 
 ### 9.4 Practical Implications

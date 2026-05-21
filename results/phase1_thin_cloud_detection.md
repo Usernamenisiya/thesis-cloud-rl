@@ -1,4 +1,4 @@
-# Phase 1: Multi-Feature RL for Thin Cloud Detection
+﻿# Phase 1: Multi-Feature RL for Thin Cloud Detection
 
 **Goal**: Specifically improve CNN's detection of thin/cirrus clouds using spectral features and targeted probability boosting.
 
@@ -8,7 +8,7 @@
 
 ## Motivation
 
-After completing 3 baseline approaches (CNN Baseline, Optimal Threshold, RL Threshold), we identified that:
+After completing 3 baseline approaches (s2cloudless Baseline, Optimal Threshold, RL Threshold), we identified that:
 - All approaches struggled with thin clouds specifically (CNN's known weakness)
 - Simply lowering threshold improved recall but created false positives
 - Need a more sophisticated approach targeting thin clouds specifically
@@ -142,7 +142,7 @@ Spectral Weight:     0.0024 ± 0.0199  (essentially zero, not used)
 ```
 
 **Metrics**:
-- Overall F1: 30.25% (+17.65% vs CNN baseline)
+- Overall F1: 30.25% (+17.65% vs s2cloudless Baseline)
 - Thin Cloud Recall: 54.6%
 - Thick Cloud Recall: 66.6%
 - F1 identical to simple optimal threshold approach
@@ -166,7 +166,7 @@ With weak features, the agent learned a **degenerate policy**:
 **This is actually OPTIMAL given the feature quality!** If features don't distinguish thin from thick, boosting everything equally is the best strategy.
 
 ### 3. Equivalent to Optimal Threshold Approach
-Visual comparison shows CNN baseline and "Thin Cloud Detection RL" produce **nearly identical masks**:
+Visual comparison shows s2cloudless Baseline and "Thin Cloud Detection RL" produce **nearly identical masks**:
 - Thin cloud patch: Both F1 = 0.143 (identical performance)
 - Thick cloud patch: F1 = 0.410 vs 0.416 (negligible difference)
 - Overall improvement (+17.65%) comes from threshold adjustment, not thin cloud boost
@@ -186,7 +186,7 @@ This suggests:
 
 | Approach | F1-Score | Improvement | Strategy |
 |----------|----------|-------------|----------|
-| **CNN Baseline** | 25.71% | - | threshold=0.5 |
+| **s2cloudless Baseline** | 25.71% | - | threshold=0.5 |
 | **Optimal Threshold** | 28.68% | +11.56% | threshold=0.10 (classical search) |
 | **RL Threshold** | 30.25% | +17.65% | Learned threshold adjustment |
 | **Multi-Feature RL** | 30.25% | +17.65% | Thin cloud boost + threshold |

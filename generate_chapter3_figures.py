@@ -19,7 +19,7 @@ os.makedirs(output_dir, exist_ok=True)
 # Color palette - modern, colorful scheme
 COLORS = {
     'input': '#3498db',        # Blue - input/data
-    'cnn': '#e74c3c',          # Red - CNN baseline
+    'cnn': '#e74c3c',          # Red - s2cloudless baseline
     'ppo': '#2ecc71',          # Green - PPO
     'dqn': '#9b59b6',          # Purple - DQN
     'feature': '#f39c12',      # Orange - feature extraction
@@ -96,7 +96,7 @@ def generate_figure_3_2_1():
     draw_arrow(ax, (8.5, 7.9), (11, 7.2))
     
     # Three branches
-    draw_rounded_box(ax, 3, 6.8, 2.8, 0.7, 's2cloudless CNN\n(Baseline)', 
+    draw_rounded_box(ax, 3, 6.8, 2.8, 0.7, 's2cloudless\n(Baseline)', 
                      COLORS['cnn'], fontsize=10, bold=True, multiline=True)
     draw_rounded_box(ax, 7, 6.8, 2.8, 0.7, 'PPO-RL\nRefinement', 
                      COLORS['ppo'], fontsize=10, bold=True, multiline=True)
@@ -173,7 +173,7 @@ def generate_figure_3_2_1():
     # Add legend
     legend_elements = [
         mpatches.Patch(facecolor=COLORS['input'], label='Input Data'),
-        mpatches.Patch(facecolor=COLORS['cnn'], label='CNN Baseline'),
+        mpatches.Patch(facecolor=COLORS['cnn'], label='s2cloudless Baseline'),
         mpatches.Patch(facecolor=COLORS['ppo'], label='PPO Agent'),
         mpatches.Patch(facecolor=COLORS['dqn'], label='DQN Agent'),
         mpatches.Patch(facecolor=COLORS['feature'], label='Feature Extraction'),

@@ -19,7 +19,7 @@ def load_ground_truth(gt_path):
     return gt
 
 def evaluate_rl_model(model_path="rl_cloud_refinement_model"):
-    """Evaluate trained RL model and compare with CNN baseline."""
+    """Evaluate trained RL model and compare with s2cloudless baseline."""
     print("🔍 Evaluating RL model performance...")
 
     # Load data
@@ -30,14 +30,14 @@ def evaluate_rl_model(model_path="rl_cloud_refinement_model"):
     # Convert ground truth to binary
     gt_binary = (ground_truth > 0).astype(np.uint8)
 
-    # CNN baseline evaluation
+    # s2cloudless baseline evaluation
     cnn_binary = (cnn_prob > 0.5).astype(np.uint8)
     accuracy = accuracy_score(gt_binary.flatten(), cnn_binary.flatten())
     precision = precision_score(gt_binary.flatten(), cnn_binary.flatten(), zero_division=0)
     recall = recall_score(gt_binary.flatten(), cnn_binary.flatten(), zero_division=0)
     f1 = f1_score(gt_binary.flatten(), cnn_binary.flatten(), zero_division=0)
 
-    print("📊 CNN Baseline Performance:")
+    print("📊 s2cloudless Baseline Performance:")
     print(f"  Accuracy: {accuracy:.4f}")
     print(f"  Precision: {precision:.4f}")
     print(f"  Recall: {recall:.4f}")

@@ -1,4 +1,4 @@
-"""
+﻿"""
 Generate Chapter 3 Methodology Figures (Version 2)
 - Figure 3.2.1: Conceptual Framework with embedded visualizations
 - Figure 3.3.1: System Architecture Pipeline with embedded visualizations
@@ -260,7 +260,7 @@ def generate_figure_3_2_1(rgb_patch, gt_patch, baseline_mask, refined_mask):
     draw_arrow(ax, (10.2, 9.6), (12.5, 8.5), lw=2.5)
     
     # Three branches
-    draw_rounded_box(ax, 3.5, 8.0, 3.2, 0.9, 's2cloudless CNN\n(Baseline)', 
+    draw_rounded_box(ax, 3.5, 8.0, 3.2, 0.9, 's2cloudless\n(Baseline)', 
                      COLORS['cnn'], fontsize=12, bold=True, multiline=True)
     draw_rounded_box(ax, 8, 8.0, 3.2, 0.9, 'PPO-RL\nRefinement', 
                      COLORS['ppo'], fontsize=12, bold=True, multiline=True)

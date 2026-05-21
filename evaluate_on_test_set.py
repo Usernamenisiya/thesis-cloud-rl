@@ -119,7 +119,7 @@ if __name__ == "__main__":
     print(f"📈 TEST SET RESULTS ({len(test_image_files)} patches, {len(all_gt):,} pixels)")
     print("=" * 60)
     
-    print("\n🧠 CNN Baseline:")
+    print("\n🧠 s2cloudless Baseline:")
     print(f"  Accuracy:  {cnn_accuracy:.4f} ({cnn_accuracy*100:.2f}%)")
     print(f"  Precision: {cnn_precision:.4f}")
     print(f"  Recall:    {cnn_recall:.4f}")

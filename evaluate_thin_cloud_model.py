@@ -1,6 +1,6 @@
 """
 Evaluation script for thin cloud detection model.
-Properly evaluates baseline CNN vs RL refined model.
+Properly evaluates s2cloudless baseline vs RL refined model.
 """
 
 import glob
@@ -166,7 +166,7 @@ print("📊 OVERALL CLOUD DETECTION RESULTS")
 print("="*80)
 
 acc, prec, rec, f1, iou = compute_metrics(baseline_metrics)
-print("\n🔵 BASELINE CNN (s2cloudless):")
+print("\n🔵 s2cloudless BASELINE:")
 print(f"  Accuracy:  {acc*100:.2f}%")
 print(f"  Precision: {prec*100:.2f}%")
 print(f"  Recall:    {rec*100:.2f}%")
@@ -197,7 +197,7 @@ if thin_baseline['tp'] + thin_baseline['fn'] > 0:
     thin_recall_baseline = thin_baseline['tp'] / (thin_baseline['tp'] + thin_baseline['fn'])
     thin_recall_rl = thin_rl['tp'] / (thin_rl['tp'] + thin_rl['fn']) if (thin_rl['tp'] + thin_rl['fn']) > 0 else 0
     
-    print(f"\n🔵 BASELINE CNN thin cloud recall: {thin_recall_baseline*100:.2f}%")
+    print(f"\n🔵 s2cloudless Baseline thin cloud recall: {thin_recall_baseline*100:.2f}%")
     print(f"🚀 RL MODEL thin cloud recall:     {thin_recall_rl*100:.2f}%")
     print(f"\n✨ THIN CLOUD IMPROVEMENT: {(thin_recall_rl - thin_recall_baseline)*100:+.2f}%")
 else:

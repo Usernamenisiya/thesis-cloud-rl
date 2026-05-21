@@ -1,4 +1,4 @@
-# Final Results - 200 Test Patches (Complete Test Set)
+﻿# Final Results - 200 Test Patches (Complete Test Set)
 
 **Date:** January 20, 2026  
 **Model:** PPO Thin Cloud Detection (240k training steps)  
@@ -10,7 +10,7 @@
 
 ## Overall Cloud Detection Performance
 
-| Metric | Baseline CNN (s2cloudless) | RL Refined Model | Improvement |
+| Metric | s2cloudless Baseline (s2cloudless) | RL Refined Model | Improvement |
 |--------|----------------------------|------------------|-------------|
 | **Accuracy** | 78.49% | 78.34% | -0.14% |
 | **Precision** | 90.47% | 88.54% | -1.93% |
@@ -22,12 +22,12 @@
 
 ## 🎯 Thin Cloud Detection - PRIMARY CONTRIBUTION
 
-| Metric | Baseline CNN | RL Model | Absolute Improvement | Relative Improvement |
+| Metric | s2cloudless Baseline | RL Model | Absolute Improvement | Relative Improvement |
 |--------|--------------|----------|---------------------|---------------------|
 | **Thin Cloud Recall** | 16.43% | 26.56% | **+10.13%** | **+61.7%** |
 
 ### Significance
-- **Baseline CNN weakness confirmed:** Only 16.43% thin cloud recall
+- **s2cloudless Baseline weakness confirmed:** Only 16.43% thin cloud recall
 - **RL model improvement:** 26.56% thin cloud recall
 - **61.7% relative improvement** - addresses core research problem
 - More robust than 100-patch results (+10.13% vs +9.00%)

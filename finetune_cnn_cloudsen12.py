@@ -93,7 +93,7 @@ def main():
     print("📈 TEST SET RESULTS")
     print("="*60)
     
-    print(f"\n🧠 Baseline CNN (threshold=0.5):")
+    print(f"\n🧠 s2cloudless Baseline (threshold=0.5):")
     print(f"  Accuracy:  {baseline_metrics['accuracy']:.4f}")
     print(f"  Precision: {baseline_metrics['precision']:.4f}")
     print(f"  Recall:    {baseline_metrics['recall']:.4f}")

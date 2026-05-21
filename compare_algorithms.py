@@ -49,14 +49,14 @@ def load_test_data():
     return test_images, test_masks
 
 def evaluate_baseline(test_images, test_masks, threshold=0.5):
-    """Evaluate CNN baseline (s2cloudless)."""
+    """Evaluate s2cloudless baseline."""
     import rasterio
     from cnn_inference import load_sentinel2_image, get_cloud_mask
     from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
     from rl_thin_cloud_environment import ThinCloudDetectionEnv
     from tqdm import tqdm
     
-    print("\n Evaluating CNN Baseline...")
+    print("\n Evaluating s2cloudless Baseline...")
     
     all_gt = []
     all_pred = []
@@ -88,7 +88,7 @@ def evaluate_baseline(test_images, test_masks, threshold=0.5):
     all_pred = np.concatenate(all_pred)
     
     results = {
-        'method': 'CNN Baseline',
+        'method': 's2cloudless Baseline',
         'accuracy': accuracy_score(all_gt, all_pred) * 100,
         'precision': precision_score(all_gt, all_pred, zero_division=0) * 100,
         'recall': recall_score(all_gt, all_pred, zero_division=0) * 100,
@@ -337,7 +337,7 @@ def create_comparison_plot(results_list):
     axes[1].set_title(' Key Metric: Thin Cloud Detection', fontsize=14, fontweight='bold')
     axes[1].set_ylim(0, max(thin_values) * 1.2)
     
-    plt.suptitle('Algorithm Comparison: CNN Baseline vs PPO vs DQN', 
+    plt.suptitle('Algorithm Comparison: s2cloudless vs PPO vs DQN', 
                  fontsize=16, fontweight='bold', y=1.02)
     plt.tight_layout()
     
@@ -361,7 +361,7 @@ def main():
     # Evaluate all methods
     results = []
     
-    # 1. CNN Baseline
+    # 1. s2cloudless Baseline
     baseline_results = evaluate_baseline(test_images, test_masks)
     results.append(baseline_results)
     

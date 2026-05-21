@@ -1,4 +1,4 @@
-"""
+﻿"""
 Save the trained RL model as a reusable pretrained model.
 This creates a clean package with the best checkpoint and documentation.
 
@@ -207,7 +207,7 @@ for patch_idx in range(env.num_patches):
 ## Performance
 
 ### Overall Cloud Detection
-| Metric | Baseline CNN | RL Refined | Improvement |
+| Metric | s2cloudless Baseline | RL Refined | Improvement |
 |--------|--------------|------------|-------------|
 | Accuracy | 78.49% | 78.34% | -0.14% |
 | Precision | 90.47% | 88.54% | -1.93% |
@@ -216,7 +216,7 @@ for patch_idx in range(env.num_patches):
 | IoU | 0.5592 | 0.5629 | **+0.37%** |
 
 ### Thin Cloud Detection (Primary Contribution)
-| Metric | Baseline CNN | RL Model | Improvement |
+| Metric | s2cloudless Baseline | RL Model | Improvement |
 |--------|--------------|----------|-------------|
 | Thin Cloud Recall | 16.43% | 26.56% | **+10.13%** (61.7% relative) |
 

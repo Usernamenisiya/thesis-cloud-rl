@@ -44,7 +44,7 @@ def post_process_cnn(cnn_prob, threshold=0.5, min_size=50, closing_size=5):
 def evaluate_enhanced_cnn(threshold=0.5, min_size=50, closing_size=5):
     """Evaluate enhanced CNN with post-processing."""
     print("=" * 60)
-    print("🔧 Enhanced CNN Baseline with Post-Processing")
+    print("🔧 Enhanced s2cloudless with Post-Processing")
     print("=" * 60)
     
     # Load CloudSEN12 data

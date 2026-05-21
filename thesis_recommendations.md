@@ -1,4 +1,4 @@
-# 💡 Additional Recommendations for RL Cloud Detection Thesis
+﻿# 💡 Additional Recommendations for RL Cloud Detection Thesis
 
 Based on your training results analysis, here are some advanced improvements to consider:
 
@@ -20,7 +20,7 @@ Based on your training results analysis, here are some advanced improvements to 
 ## 🚀 Expected Improvements:
 - Higher recall (detecting more actual clouds)
 - Better balance between precision and recall
-- Improved F1-score over CNN baseline
+- Improved F1-score over s2cloudless Baseline
 - More robust thin cloud detection performance
 
 ## 🎯 Key Takeaways from Your Analysis:

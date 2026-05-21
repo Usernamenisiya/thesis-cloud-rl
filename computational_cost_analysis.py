@@ -67,7 +67,7 @@ for idx in range(num_samples):
     
     gt_binary = (gt_raw > 0).astype(np.uint8)
     
-    # ===== BASELINE CNN TIMING =====
+    # ===== BASELINE (s2cloudless) TIMING =====
     start = time.time()
     cnn_prob = get_cloud_mask(image)
     baseline_pred = (cnn_prob > 0.5).astype(np.uint8)
@@ -107,7 +107,7 @@ for idx in range(num_samples):
     rl_time = time.time() - start
     rl_times.append(rl_time)
     
-    # Overhead = total RL time - baseline CNN time
+    # Overhead = total RL time - s2cloudless time
     rl_overhead_times.append(rl_time - baseline_time)
     
     if (idx + 1) % 10 == 0:
@@ -135,7 +135,7 @@ print("="*70)
 
 print(f"\n{'Method':<30} {'Mean (ms)':<15} {'Median (ms)':<15} {'Std (ms)':<15}")
 print("-"*80)
-print(f"{'Baseline CNN only':<30} {baseline_mean:>13.2f} {baseline_median:>13.2f} {baseline_std:>13.2f}")
+print(f"{'s2cloudless Baseline':<30} {baseline_mean:>13.2f} {baseline_median:>13.2f} {baseline_std:>13.2f}")
 print(f"{'RL (CNN + Refinement)':<30} {rl_mean:>13.2f} {rl_median:>13.2f} {rl_std:>13.2f}")
 print(f"{'RL Overhead (refinement only)':<30} {overhead_mean:>13.2f} {overhead_median:>13.2f} {overhead_std:>13.2f}")
 
@@ -196,7 +196,7 @@ print("="*70)
 with open('computational_cost_results.txt', 'w') as f:
     f.write("COMPUTATIONAL COST ANALYSIS\n")
     f.write("="*70 + "\n\n")
-    f.write(f"Baseline CNN: {baseline_mean:.2f} ± {baseline_std:.2f} ms\n")
+    f.write(f"s2cloudless Baseline: {baseline_mean:.2f} ± {baseline_std:.2f} ms\n")
     f.write(f"RL Model: {rl_mean:.2f} ± {rl_std:.2f} ms\n")
     f.write(f"RL Overhead: {overhead_mean:.2f} ± {overhead_std:.2f} ms ({overhead_pct:.1f}%)\n\n")
     f.write(f"Throughput:\n")

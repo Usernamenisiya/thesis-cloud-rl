@@ -1,4 +1,4 @@
-# Baseline Approaches Results Summary
+﻿# Baseline Approaches Results Summary
 **Date**: January 13, 2026  
 **Phase**: Initial Implementation (Before Multi-Feature RL)
 
@@ -10,8 +10,8 @@
 
 ---
 
-## Approach 1: CNN Baseline (s2cloudless)
-**Method**: Pre-trained s2cloudless CNN with default threshold (0.5)
+## Approach 1: s2cloudless Baseline (s2cloudless)
+**Method**: Pre-trained s2cloudless with default threshold (0.5)
 
 ### Results:
 - **Accuracy**: 67.19%

@@ -1,0 +1,60 @@
+Panelist: SIR PACOT Comment:
+
+
+Page Reflected in Chapter 4: 
+Change metrics & evaluation of results with supporting literature. Possible if pixel based or other metrics
+Possible evaluation: SSIM, PSNR, No ground truth metrics
+
+PIQE
+NIQE    
+BRISQUE
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+MA'AM ANGEL'S COMMENT:
+
+1. Better if sample images of the datasets can be shown - Done
+2. Graphs of the results (Training and test Results) - Done
+3. Connect the flow of Chapter 2 and 3 to the Frameworks - Done 
+4. In 1.3 Objectives of the Study, she said general and specific objectives are no longer needed - Done
+5. Better if naay Theoretical Framework daw based on the flow of the document. - Done
+6. in chapter 3, e add daw ang test procedures. - Done
+7. in 3.2 Refine (make this as the basis of the step by step flow of the document)
+8. connection to chapter 2.8, group the dataset by class - Done
+9. 3.6.1 Primary Performance Metrics, True Positive (TP), True Negative(TN), False Positives (FP), and False Negative(FN). Show all of them in Chapter 4. - Done
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+Panelist Chair: SIR TAKEYASU NAKAZATO comment:
+
+
+20. Significance: what is this from 53.72% to 71.32%? do not include results here.
+21. Scope, remove results.
+22. Limitations, remove results.
+24. In your Datasets, The Dataset includes all 13 Sentinel-2 spectral bands, what are these bands? it is included in your paper.
+19. in Background of the Study, you use proposed approach, then in significance of the study, you used proposed system.
+8. Create Discussion in Table 2.1
+14. Why there is result in figure 3.3.1?
+15. 3.3.1 Baseline model Selection and Justification. why there is something explanations here? chapter 3 is just method of your study.
+3. In your Background of the Study - Last Paragraph, you stated that you propose a novel approach by applying Rienforcement Learning to the specific problem of thei cloud detection. My Question is, where is the novel of your research?
+1. Why you choice DQN and PPO? there are other algorithms, what is your reasons for selecting DQN and PPO?
+18. in "Adaptive Image Slicing", why Subdivided into 64 x 64 pixel? what is your reference for this? how it works if 32 x 32 or 128 x 128? include in your expirement.
+16. inlcude the "Data collection and Preparation" in the system architecture.
+17. Include "3.4.2 Annotation and Ground Truth Protocol."
+23. Include in Chapter 3, how many dataset per class.
+13.Where is this in CF? Three initial branches to generate comparative inputs: the baseline s2cloudless, the PPO-RL refinement, and the DQN-RL refinement.
+4. Your title is comparative, but your main objective is to developed a hybrid baseline-RL framework?
+2. Why 50% of your references are outdated?
+5. Why Choosing DQN? What are the other methods for value estimation?
+6. Why Choosing PPO? What are the other methods for this Stability?
+7. Why Gymnasium Framework? what are the other methods for standardizing learning?
+9. What is the Conceptual framework of the baseline?
+18. include "Preprocessing and Feature Engineering Pipeline." - Done 
+10. Show how the Algorithms works. - Done
+11. Show how DQN works. - Done
+12. Show how PPO works. - Done

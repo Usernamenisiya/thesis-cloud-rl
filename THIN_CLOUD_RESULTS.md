@@ -1,4 +1,4 @@
-# 🎯 Thin Cloud Detection: Final Results
+﻿# 🎯 Thin Cloud Detection: Final Results
 
 **Date**: January 22, 2026  
 **Model**: Multi-Objective RL with PPO  
